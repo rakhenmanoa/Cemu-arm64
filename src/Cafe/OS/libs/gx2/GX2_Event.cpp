@@ -206,12 +206,12 @@ namespace GX2
 	// "Limit to 30 FPS": a thread that comes back from GX2WaitForVsync less than 1.5 vsync periods after its previous
 	// return waits for one more vsync, so a game that would run at 60 FPS (menus) is paced at 30 FPS like the rest of the game
 	static std::mutex s_vsyncLimitMutex;
-	static std::unordered_map<coreinit::OSThread_t*, uint64> s_vsyncLimitLastReturn;
+	static std::unordered_map<OSThread_t*, uint64> s_vsyncLimitLastReturn;
 
 	void GX2WaitForVsync()
 	{
 		GuestWaitProf::Scope prof(GuestWaitProf::VSYNC);
-		coreinit::OSThread_t* currentThread = coreinit::OSGetCurrentThread();
+		OSThread_t* currentThread = coreinit::OSGetCurrentThread();
 		__OSLockScheduler();
 		g_vsyncThreadQueue.GetPtr()->queueAndWait(currentThread);
 		__OSUnlockScheduler();
