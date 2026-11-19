@@ -456,6 +456,8 @@ struct CemuConfig
 	ConfigValue<float> userDisplayGamma { 2.2f }; // 0 = sRGB, >0 gamma
 
 	ConfigValue<bool> vk_accurate_barriers{ true };
+	ConfigValue<bool> gx2_drawdone_lag{ false }; // GX2DrawDone waits for the previous DrawDone instead of its own (game runs ahead of the GPU)
+	ConfigValue<bool> frame_limit_30{ false }; // GX2WaitForVsync never returns faster than every second vsync
 
 	struct
 	{

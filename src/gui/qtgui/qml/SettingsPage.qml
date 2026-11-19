@@ -172,6 +172,16 @@ Item {
                 text: qsTr("Accurate barriers")
                 hint: qsTr("Turn off for more speed on heavy scenes; may cause rare graphical glitches. Applies on next game start")
             }
+            SwitchRow {
+                key: "gx2_drawdone_lag"
+                text: qsTr("Run ahead of the GPU")
+                hint: qsTr("Much faster on heavy scenes (the game no longer waits for the GPU at every frame); may cause rare glitches. Applies right away")
+            }
+            SwitchRow {
+                key: "frame_limit_30"
+                text: qsTr("Limit to 30 FPS")
+                hint: qsTr("Keeps menus and light scenes at 30 FPS so the game speed does not change. Applies right away")
+            }
             ComboRow {
                 key: "fullscreen_scaling"
                 label: qsTr("Scaling")

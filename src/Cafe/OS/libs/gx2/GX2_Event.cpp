@@ -10,6 +10,9 @@
 #include "config/ActiveSettings.h"
 #include "util/helpers/ConcurrentQueue.h"
 #include "Cafe/HW/Latte/Core/GuestWaitProfiler.h"
+#include "config/CemuConfig.h"
+#include <mutex>
+#include <unordered_map>
 
 namespace GX2
 {
@@ -200,12 +203,36 @@ namespace GX2
 		osLib_returnFromFunction(hCPU, 0);
 	}
 
+	// "Limit to 30 FPS": a thread that comes back from GX2WaitForVsync less than 1.5 vsync periods after its previous
+	// return waits for one more vsync, so a game that would run at 60 FPS (menus) is paced at 30 FPS like the rest of the game
+	static std::mutex s_vsyncLimitMutex;
+	static std::unordered_map<coreinit::OSThread_t*, uint64> s_vsyncLimitLastReturn;
+
 	void GX2WaitForVsync()
 	{
 		GuestWaitProf::Scope prof(GuestWaitProf::VSYNC);
+		coreinit::OSThread_t* currentThread = coreinit::OSGetCurrentThread();
 		__OSLockScheduler();
-		g_vsyncThreadQueue.GetPtr()->queueAndWait(coreinit::OSGetCurrentThread());
+		g_vsyncThreadQueue.GetPtr()->queueAndWait(currentThread);
 		__OSUnlockScheduler();
+		if (GetConfig().frame_limit_30.GetValue())
+		{
+			uint64 now = PPCTimer_getRawTsc();
+			uint64 last;
+			{
+				std::lock_guard lock(s_vsyncLimitMutex);
+				last = s_vsyncLimitLastReturn[currentThread];
+			}
+			if (last != 0 && PPCTimer_tscToMicroseconds(now - last) < 25000)
+			{
+				__OSLockScheduler();
+				g_vsyncThreadQueue.GetPtr()->queueAndWait(currentThread);
+				__OSUnlockScheduler();
+				now = PPCTimer_getRawTsc();
+			}
+			std::lock_guard lock(s_vsyncLimitMutex);
+			s_vsyncLimitLastReturn[currentThread] = now;
+		}
 	}
 
 	void GX2WaitForFlip()
@@ -218,10 +245,14 @@ namespace GX2
 		__OSUnlockScheduler();
 	}
 
-	// EXPERIMENT (CEMU_DRAWDONE_LAG=1): GX2DrawDone waits for the previous DrawDone's timestamp instead of its own,
-	// so the game can run one DrawDone ahead of the GPU instead of being serialized with it. Off by default:
-	// the game may then read data (readbacks, render targets) that the GPU has not finished yet.
-	static const bool s_drawDoneLag = getenv("CEMU_DRAWDONE_LAG") != nullptr;
+	// "Run ahead of the GPU" (settings, or CEMU_DRAWDONE_LAG=1): GX2DrawDone waits for the previous DrawDone's
+	// timestamp instead of its own, so the game can run one DrawDone ahead of the GPU instead of being serialized with it.
+	// Off by default: the game may then read data (readbacks, render targets) that the GPU has not finished yet.
+	static bool DrawDoneLagEnabled()
+	{
+		static const bool s_env = getenv("CEMU_DRAWDONE_LAG") != nullptr;
+		return s_env || GetConfig().gx2_drawdone_lag.GetValue();
+	}
 	static std::atomic<uint64> s_prevDrawDoneTimestamp{0};
 
 	bool GX2DrawDone()
@@ -241,7 +272,7 @@ namespace GX2
 		GX2Command_Flush(0x100, true);
 
 		uint64 ts = GX2GetLastSubmittedTimeStamp();
-		if (s_drawDoneLag)
+		if (DrawDoneLagEnabled())
 		{
 			const uint64 prevTs = s_prevDrawDoneTimestamp.exchange(ts);
 			if (prevTs == 0 || prevTs >= ts)
