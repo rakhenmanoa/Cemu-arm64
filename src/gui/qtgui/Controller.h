@@ -82,6 +82,12 @@ class Controller : public QObject
 	Q_INVOKABLE void downloadGraphicPacks();
 	Q_INVOKABLE void cancelGraphicPackDownload();
 
+	// input mapping of player 1. [{id, name, device}] device empty = not mapped
+	Q_INVOKABLE QVariantList inputMappings(int player) const;
+	Q_INVOKABLE void startInputCapture();
+	Q_INVOKABLE bool pollInputCapture(int player, int mappingId); // true: mapped, inputChanged emitted
+	Q_INVOKABLE void clearInputMapping(int player, int mappingId);
+
 	// on-screen gamepad on top of the game (player 1, Wii U GamePad type only)
 	Q_INVOKABLE bool touchGamepadEnabled() const;
 	Q_INVOKABLE bool setTouchGamepadEnabled(bool enabled); // false: error signal emitted

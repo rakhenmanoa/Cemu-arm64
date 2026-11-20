@@ -156,7 +156,9 @@ ApplicationWindow {
 
     Component {
         id: controllersPage
-        ControllersPage {}
+        ControllersPage {
+            onOpenMapping: stack.push(inputMappingPage)
+        }
     }
 
     Component {
@@ -184,6 +186,11 @@ ApplicationWindow {
     Component {
         id: aboutPage
         AboutPage {}
+    }
+
+    Component {
+        id: inputMappingPage
+        InputMappingPage {}
     }
 
     Component {

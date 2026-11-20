@@ -8,6 +8,7 @@ Item {
     id: page
 
     property string title: qsTr("Controllers")
+    signal openMapping()
 
     readonly property int player: 0
     property var player0: ({"enabled": false, "type": "", "devices": []})
@@ -180,12 +181,19 @@ Item {
                 }
             }
 
-            Button {
+            RowLayout {
                 Layout.leftMargin: 16
                 Layout.topMargin: 8
+                spacing: 8
                 visible: page.player0.devices.length > 0
-                text: qsTr("Reset default mapping")
-                onClicked: cemu.resetInputMapping(page.player)
+                Button {
+                    text: qsTr("Reset default mapping")
+                    onClicked: cemu.resetInputMapping(page.player)
+                }
+                Button {
+                    text: qsTr("Edit mapping")
+                    onClicked: page.openMapping()
+                }
             }
 
             SectionHeader { text: qsTr("DETECTED CONTROLLERS") }

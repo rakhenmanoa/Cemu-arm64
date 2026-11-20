@@ -228,6 +228,41 @@ void Controller::endSession()
 	::_exit(0);
 }
 
+// ---- input mapping ----
+
+QVariantList Controller::inputMappings(int player) const
+{
+	QVariantList result;
+	for (const auto& m : MobileBackend::GetInputMappings(player))
+	{
+		QVariantMap v;
+		v[QStringLiteral("id")] = m.id;
+		v[QStringLiteral("name")] = QString::fromStdString(m.emulatedName);
+		v[QStringLiteral("device")] = QString::fromStdString(m.deviceName);
+		result.push_back(v);
+	}
+	return result;
+}
+
+void Controller::startInputCapture()
+{
+	MobileBackend::StartInputCapture();
+}
+
+bool Controller::pollInputCapture(int player, int mappingId)
+{
+	const bool captured = MobileBackend::PollInputCapture(player, mappingId);
+	if (captured)
+		Q_EMIT inputChanged();
+	return captured;
+}
+
+void Controller::clearInputMapping(int player, int mappingId)
+{
+	MobileBackend::ClearInputMapping(player, mappingId);
+	Q_EMIT inputChanged();
+}
+
 // ---- on-screen gamepad ----
 
 bool Controller::touchGamepadEnabled() const

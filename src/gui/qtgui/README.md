@@ -6,16 +6,20 @@ It lives next to the wxWidgets interface and is started with `Cemu --mobile-ui`
 
 What it does today:
 
-- game list (grid with icons), refresh, launch
-- game folder management
-- controllers: pick the SDL controller for player 1, default mapping, live button test
-- accounts: list, active account, create / edit / delete, network service, online files check (ported from the Android port)
+- game list (grid with icons), refresh, launch, game folder management
+- controllers: pick the SDL controller for player 1, default mapping, button by button mapping, live button test
+- on-screen gamepad over the game (multi-touch, drawn by the core overlay, press virtual keys of the Keyboard device)
+- accounts: list, active account, create / edit / delete, network service, online files check
+- title manager: list, install from a folder, delete, convert to .wua
+- emulated USB devices: Skylanders portal, Disney Infinity base, LEGO Dimensions toypad
+- graphic packs: download / update the community packs, packs of a game, packs for all games
+- settings, About
 - navigation with a gamepad (D-pad / left stick, A = select, B = back, Y = game menu)
 - full screen Vulkan render window with keyboard, mouse and touch forwarding
 
-Everything else (custom input mapping, graphics/audio settings, graphic packs, title manager,
-debugger, ...) is still only available in the desktop interface; both share the same
-configuration files.
+Not ported from the Android port: custom GPU drivers (Mesa is used), hotkeys, per-game profiles (CPU mode, thread
+quantum), saves manager, moving / resizing the on-screen controls. These stay in the desktop interface; both share the
+same configuration files.
 
 ## Layout
 
@@ -24,7 +28,7 @@ configuration files.
 | `MobileBackend.*` | Bridge to the emulator core. Standard C++ types only, no Qt. |
 | `QtMobileUI.*` | Entry point, creates the Qt application and the QML engine. |
 | `Controller.*` | Object exposed to QML as `cemu`. |
-| `MobileAccounts.cpp` | Accounts part of the bridge. |
+| `MobileAccounts.cpp`, `MobileGraphicPackDownload.cpp`, `MobileUSBDevices.cpp`, `MobileTitles.cpp`, `MobileTouchGamepad.cpp`, `MobileInputMapping.cpp` | Parts of the bridge, one per feature. |
 | `GameListModel.*` | List model behind the game grid. |
 | `GameWindow.*` | Native window the emulator renders into. |
 | `qml/` | The pages. |

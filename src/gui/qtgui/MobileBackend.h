@@ -303,6 +303,21 @@ namespace MobileBackend
 	// 3 password cache empty, 4 no principal id). Empty = ok
 	std::vector<std::string> GetAccountValidationErrors(uint32_t persistentId);
 
+	// ---- full input mapping (ported from the Android port, InputMapper / ControllerInputSettingsScreen) ----
+	struct InputMapping
+	{
+		int id = 0;
+		std::string emulatedName; // Wii U button or axis
+		std::string deviceName;	  // physical button/axis mapped to it, empty = nothing
+	};
+	// all the mappable buttons of the controller of this slot
+	std::vector<InputMapping> GetInputMappings(int player);
+	// waits for the next press on one of the assigned controllers (not the on-screen gamepad) and maps it to mappingId.
+	// Call StartInputCapture, then PollInputCapture regularly (about every 50 ms). Returns true once a button was captured
+	void StartInputCapture();
+	bool PollInputCapture(int player, int mappingId);
+	void ClearInputMapping(int player, int mappingId);
+
 	// ---- on-screen gamepad (ported from the Android port, input overlay). It is the "Keyboard" device of the player, whose
 	// virtual keys are pressed by the controls. Only for the Wii U GamePad controller type. Saved in the controller profile ----
 	bool IsTouchGamepadEnabled(int player);
