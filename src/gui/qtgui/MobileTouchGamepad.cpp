@@ -100,7 +100,11 @@ namespace MobileBackend
 		std::vector<LatteTouchGamepad::TouchPoint> converted;
 		converted.reserve(points.size());
 		for (const auto& p : points)
-			converted.push_back({p.id, (float)p.x, (float)p.y, p.down});
+		{
+			int x = p.x, y = p.y;
+			PhysicalToLogical(x, y);
+			converted.push_back({p.id, (float)x, (float)y, p.down});
+		}
 		sint32 w = 0, h = 0;
 		WindowSystem::GetWindowPhysSize(w, h);
 		bool screenDown = false;

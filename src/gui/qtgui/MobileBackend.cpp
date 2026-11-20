@@ -313,14 +313,50 @@ namespace MobileBackend
 		NotifyGameListChanged();
 	}
 
+	namespace
+	{
+		std::atomic_int s_rawPhysWidth{0}, s_rawPhysHeight{0};
+	}
+
 	void SetWindowSize(int width, int height, int physWidth, int physHeight, double scale)
 	{
 		auto& info = WindowSystem::GetWindowInfo();
+		// optional rotation of the game image (the swapchain keeps the real size, the emulator sees the rotated one)
+		const int setting = GetConfig().game_rotation.GetValue();
+		const int rotation = setting == 1 ? 90 : (setting == 2 ? 270 : 0);
+		s_rawPhysWidth = physWidth;
+		s_rawPhysHeight = physHeight;
+		if (rotation != 0)
+		{
+			std::swap(width, height);
+			std::swap(physWidth, physHeight);
+		}
+		info.rotation = rotation;
 		info.width = width;
 		info.height = height;
 		info.phys_width = physWidth;
 		info.phys_height = physHeight;
 		info.dpi_scale = scale;
+	}
+
+	void PhysicalToLogical(int& x, int& y)
+	{
+		const int rotation = WindowSystem::GetWindowInfo().rotation;
+		const int rawW = s_rawPhysWidth, rawH = s_rawPhysHeight;
+		if (rotation == 90)
+		{
+			const int lx = y;
+			const int ly = rawW - x;
+			x = lx;
+			y = ly;
+		}
+		else if (rotation == 270)
+		{
+			const int lx = rawH - y;
+			const int ly = x;
+			x = lx;
+			y = ly;
+		}
 	}
 
 	bool LaunchGame(uint64_t titleId, const NativeWindow& window, std::string& errorOut)
@@ -469,6 +505,7 @@ namespace MobileBackend
 
 	void SetMouse(int physX, int physY, bool leftDown, bool rightDown)
 	{
+		PhysicalToLogical(physX, physY);
 		auto& instance = InputManager::instance();
 		std::scoped_lock lock(instance.m_main_mouse.m_mutex);
 		instance.m_main_mouse.position = {physX, physY};
@@ -530,6 +567,8 @@ namespace MobileBackend
 				                         [](CemuConfig& c, int v) { c.upscale_filter = std::clamp(v, 0, 3); }}},
 				{"downscale_filter",    {[](CemuConfig& c) { return (int)c.downscale_filter.GetValue(); },
 				                         [](CemuConfig& c, int v) { c.downscale_filter = std::clamp(v, 0, 3); }}},
+				{"game_rotation",       {[](CemuConfig& c) { return (int)c.game_rotation.GetValue(); },
+				                         [](CemuConfig& c, int v) { c.game_rotation = std::clamp(v, 0, 2); }}},
 				{"fullscreen_scaling",  {[](CemuConfig& c) { return (int)c.fullscreen_scaling.GetValue(); },
 				                         [](CemuConfig& c, int v) { c.fullscreen_scaling = std::clamp(v, 0, 1); }}},
 				// audio

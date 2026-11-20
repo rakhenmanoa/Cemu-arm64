@@ -142,6 +142,7 @@ XMLConfigParser CemuConfig::Load(XMLConfigParser& parser)
 	upscale_filter = graphic.get("UpscaleFilter", kBicubicHermiteFilter);
 	downscale_filter = graphic.get("DownscaleFilter", kLinearFilter);
 	fullscreen_scaling = graphic.get("FullscreenScaling", kKeepAspectRatio);
+	game_rotation = graphic.get("GameRotation", 0);
 	async_compile = graphic.get("AsyncCompile", async_compile);
 	gx2_drawdone_lag = graphic.get("GX2DrawDoneLag", false);
 	frame_limit_30 = graphic.get("FrameLimit30", false);
@@ -378,6 +379,7 @@ XMLConfigParser CemuConfig::Save(XMLConfigParser& parser)
 	graphic.set("UpscaleFilter", upscale_filter);
 	graphic.set("DownscaleFilter", downscale_filter);
 	graphic.set("FullscreenScaling", fullscreen_scaling);
+	graphic.set("GameRotation", game_rotation);
 	graphic.set("AsyncCompile", async_compile.GetValue());
 	graphic.set("vkAccurateBarriers", vk_accurate_barriers);
 	graphic.set("GX2DrawDoneLag", gx2_drawdone_lag);

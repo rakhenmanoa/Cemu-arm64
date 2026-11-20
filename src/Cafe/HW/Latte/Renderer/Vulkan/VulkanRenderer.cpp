@@ -2106,7 +2106,31 @@ bool VulkanRenderer::ImguiBegin(bool mainWindow)
 void VulkanRenderer::ImguiEnd()
 {
 	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_state.currentCommandBuffer);
+	ImDrawData* drawData = ImGui::GetDrawData();
+	const int rotation = WindowSystem::GetWindowInfo().rotation;
+	if (rotation == 90 || rotation == 270)
+	{
+		// rotate the logical (landscape) overlay to the physical swapchain
+		const float logicalW = drawData->DisplaySize.x;
+		const float logicalH = drawData->DisplaySize.y;
+		auto rotatePoint = [&](float x, float y) -> ImVec2 {
+			return rotation == 90 ? ImVec2(logicalH - y, x) : ImVec2(y, logicalW - x);
+		};
+		for (int n = 0; n < drawData->CmdListsCount; n++)
+		{
+			ImDrawList* list = drawData->CmdLists[n];
+			for (ImDrawVert& vtx : list->VtxBuffer)
+				vtx.pos = rotatePoint(vtx.pos.x, vtx.pos.y);
+			for (ImDrawCmd& cmd : list->CmdBuffer)
+			{
+				const ImVec2 a = rotatePoint(cmd.ClipRect.x, cmd.ClipRect.y);
+				const ImVec2 b = rotatePoint(cmd.ClipRect.z, cmd.ClipRect.w);
+				cmd.ClipRect = ImVec4(std::min(a.x, b.x), std::min(a.y, b.y), std::max(a.x, b.x), std::max(a.y, b.y));
+			}
+		}
+		drawData->DisplaySize = ImVec2(logicalH, logicalW);
+	}
+	ImGui_ImplVulkan_RenderDrawData(drawData, m_state.currentCommandBuffer);
 	vkCmdEndRenderPass(m_state.currentCommandBuffer);
 
 	// restore viewport and scissor box
@@ -2996,6 +3020,15 @@ bool VulkanRenderer::AcquireNextSwapchainImage(bool mainWindow)
 	return true;
 }
 
+// the game view can be rotated by 90/270 degrees (mobile UI). The rest of the emulator works with the rotated (logical) window size,
+// the swapchain has the real (physical) one
+static void SwapSizeForRotation(int& w, int& h)
+{
+	const int rotation = WindowSystem::GetWindowInfo().rotation;
+	if (rotation == 90 || rotation == 270)
+		std::swap(w, h);
+}
+
 void VulkanRenderer::RecreateSwapchain(bool mainWindow, bool skipCreate)
 {
 	SubmitCommandBuffer();
@@ -3007,6 +3040,7 @@ void VulkanRenderer::RecreateSwapchain(bool mainWindow, bool skipCreate)
 	{
 		ImGui_ImplVulkan_Shutdown();
 		WindowSystem::GetWindowPhysSize(size.x, size.y);
+		SwapSizeForRotation(size.x, size.y);
 	}
 	else
 	{
@@ -3036,7 +3070,10 @@ bool VulkanRenderer::UpdateSwapchainProperties(bool mainWindow)
 
 	int width, height;
 	if (mainWindow)
+	{
 		WindowSystem::GetWindowPhysSize(width, height);
+		SwapSizeForRotation(width, height);
+	}
 	else
 		WindowSystem::GetPadWindowPhysSize(width, height);
 	auto extent = chainInfo.getExtent();
@@ -3272,11 +3309,34 @@ void VulkanRenderer::DrawBackbufferQuad(LatteTextureView* texView, RendererOutpu
 	renderPassInfo.renderArea.extent = chainInfo.getExtent();
 	renderPassInfo.clearValueCount = 0;
 
+	// rotated game view: the rectangle is given in rotated (logical) coordinates, the image itself is rotated by the vertex shader
+	sint32 viewX = imageX, viewY = imageY, viewW = imageWidth, viewH = imageHeight;
+	if (!padView)
+	{
+		const int rotation = WindowSystem::GetWindowInfo().rotation;
+		const sint32 physW = (sint32)chainInfo.getExtent().width;
+		const sint32 physH = (sint32)chainInfo.getExtent().height;
+		if (rotation == 90)
+		{
+			viewX = physW - imageY - imageHeight;
+			viewY = imageX;
+			viewW = imageHeight;
+			viewH = imageWidth;
+		}
+		else if (rotation == 270)
+		{
+			viewX = imageY;
+			viewY = physH - imageX - imageWidth;
+			viewW = imageHeight;
+			viewH = imageWidth;
+		}
+	}
+
 	VkViewport viewport{};
-	viewport.x = imageX;
-	viewport.y = imageY;
-	viewport.width = imageWidth;
-	viewport.height = imageHeight;
+	viewport.x = viewX;
+	viewport.y = viewY;
+	viewport.width = viewW;
+	viewport.height = viewH;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(m_state.currentCommandBuffer, 0, 1, &viewport);

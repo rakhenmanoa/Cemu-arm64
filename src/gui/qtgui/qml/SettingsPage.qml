@@ -188,6 +188,11 @@ Item {
                 options: [qsTr("Keep aspect ratio"), qsTr("Stretch")]
             }
             ComboRow {
+                key: "game_rotation"
+                label: qsTr("Game rotation")
+                options: [qsTr("Off"), qsTr("90° clockwise (landscape, phone turned left)"), qsTr("90° counterclockwise (landscape, phone turned right)")]
+            }
+            ComboRow {
                 key: "upscale_filter"
                 label: qsTr("Upscale filter")
                 options: page.filters

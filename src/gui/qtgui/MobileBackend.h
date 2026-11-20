@@ -68,6 +68,8 @@ namespace MobileBackend
 	void SetKeyState(uint32_t platformKeyCode, bool down);
 	void ReleaseAllKeys();
 	void SetMouse(int physX, int physY, bool leftDown, bool rightDown);
+	// converts physical window coordinates to the (possibly rotated) game view coordinates
+	void PhysicalToLogical(int& x, int& y);
 	void SetTouch(int physX, int physY, bool down);
 	// all the fingers on the game window (physical pixels). With the on-screen gamepad enabled, the fingers that start on
 	// a control drive it, the first other finger is the GamePad touch screen
