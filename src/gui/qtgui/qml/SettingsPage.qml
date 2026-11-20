@@ -265,6 +265,9 @@ Item {
             SwitchRow { key: "overlay_cpu"; text: qsTr("CPU usage") }
             SwitchRow { key: "overlay_ram"; text: qsTr("RAM usage") }
             SwitchRow { key: "overlay_vram"; text: qsTr("VRAM usage") }
+            SwitchRow { key: "overlay_cpu_per_core"; text: qsTr("CPU usage per core") }
+            SwitchRow { key: "overlay_drawcalls"; text: qsTr("Draw calls per frame") }
+            SwitchRow { key: "overlay_debug"; text: qsTr("Debug information") }
 
             // ---------------- notifications
             SectionHeader { text: qsTr("Notifications") }
@@ -284,6 +287,14 @@ Item {
             SwitchRow {
                 key: "notification_shaders"
                 text: qsTr("Shader compilation")
+            }
+            SwitchRow {
+                key: "notification_controller_profiles"
+                text: qsTr("Controller profiles")
+            }
+            SwitchRow {
+                key: "notification_friends"
+                text: qsTr("Friend list")
             }
 
             Label {

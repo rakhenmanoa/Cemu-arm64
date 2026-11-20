@@ -72,6 +72,10 @@ ApplicationWindow {
                         onTriggered: stack.push(settingsPage)
                     }
                     MenuItem {
+                        text: qsTr("About Cemu")
+                        onTriggered: stack.push(aboutPage)
+                    }
+                    MenuItem {
                         text: qsTr("Quit")
                         onTriggered: Qt.quit()
                     }
@@ -146,6 +150,11 @@ ApplicationWindow {
     Component {
         id: accountsPage
         AccountsPage {}
+    }
+
+    Component {
+        id: aboutPage
+        AboutPage {}
     }
 
     Component {

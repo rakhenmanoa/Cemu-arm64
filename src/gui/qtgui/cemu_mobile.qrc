@@ -7,5 +7,6 @@
         <file alias="GraphicPacksPage.qml">qml/GraphicPacksPage.qml</file>
         <file alias="ControllersPage.qml">qml/ControllersPage.qml</file>
         <file alias="AccountsPage.qml">qml/AccountsPage.qml</file>
+        <file alias="AboutPage.qml">qml/AboutPage.qml</file>
     </qresource>
 </RCC>
