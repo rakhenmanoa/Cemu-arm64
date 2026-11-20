@@ -1,0 +1,38 @@
+#!/bin/sh
+# Lance Cemu (interface tactile) dans un sway imbriqué dont la sortie est tournée,
+# sans toucher à la rotation de l'écran de Plasma (pas de kscreen-doctor).
+#
+#   cemu-mobile-sway [arguments de Cemu]
+#
+# Variables :
+#   CEMU_ROTATE   90 (défaut), 180, 270 : rotation de la sortie sway
+#   CEMU_BIN      binaire à lancer (défaut : Cemu)
+#
+# Avec 90, tourne le téléphone vers la gauche (sens antihoraire) ; avec 270, vers la droite.
+# Toute l'application (menus compris) est affichée tournée, pas seulement le jeu.
+
+ROT="${CEMU_ROTATE:-90}"
+case "$ROT" in 90|180|270) ;; *) echo "CEMU_ROTATE doit valoir 90, 180 ou 270" >&2; exit 1 ;; esac
+
+if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$SWAYSOCK" ]; then
+	echo "Pas de session Wayland détectée (WAYLAND_DISPLAY vide)." >&2
+	exit 1
+fi
+
+CFG="$(mktemp /tmp/cemu-sway.XXXXXX)"
+trap 'rm -f "$CFG"' EXIT
+
+cat > "$CFG" <<CONF
+xwayland disable
+default_border none
+focus_follows_mouse no
+output * transform $ROT
+for_window [app_id=".*"] fullscreen enable
+exec sh -c '${CEMU_BIN:-Cemu} --mobile-ui \$CEMU_ARGS; swaymsg exit'
+CONF
+
+export CEMU_ARGS="$*"
+export WLR_BACKENDS=wayland
+export WLR_NO_HARDWARE_CURSORS=1
+export QT_QPA_PLATFORM=wayland
+exec sway --unsupported-gpu -c "$CFG"
