@@ -141,6 +141,74 @@ namespace MobileBackend
 	// Wii U buttons currently held on this slot, for the test screen
 	std::vector<InputPressedButton> GetPressedInputButtons(int player);
 
+	// ---- title manager: installed / discovered titles, install from a folder, delete, convert to .wua
+	// (ported from the Android port, NativeGameTitles.cpp and WuaConverter.cpp) ----
+	struct TitleEntry
+	{
+		uint64_t titleId = 0;
+		uint64_t uid = 0; // identifies the location of this copy of the title
+		std::string name;
+		std::string path;
+		bool inMlc = false; // installed in the mlc folder
+		int version = 0;
+		std::string region; // "JPN", "USA", "EUR", ... or empty
+		int type = 0;	  // 0 base, 1 update, 2 DLC, 3 system
+		int format = 0;	  // 0 folder, 1 WUD/WUX, 2 WUA, 3 NUS, 4 WUHB
+	};
+	std::vector<TitleEntry> GetTitleEntries();
+
+	enum class InstallCheck
+	{
+		kInvalid,		  // not a title folder
+		kOk,			  // can be installed
+		kOverwrite,		  // an older version is installed and gets replaced
+		kSameVersion,	  // the same version is already installed
+		kNewerInstalled,  // a newer version is installed
+		kDifferentType	  // something of another type is installed at the target
+	};
+	struct InstallInfo
+	{
+		InstallCheck check = InstallCheck::kInvalid;
+		std::string targetPath;
+		std::string name;
+	};
+	// sourcePath: folder of the title (the one that contains code, content and meta)
+	InstallInfo CheckInstallTitle(const std::string& sourcePath);
+	enum class InstallResult
+	{
+		kFinished,
+		kError,
+		kNotEnoughSpace,
+		kCancelled
+	};
+	// blocking, run it from a worker thread. progress(bytesDone, bytesTotal) is called from that thread
+	InstallResult InstallTitle(const std::string& sourcePath, const std::function<void(uint64_t, uint64_t)>& progress,
+							   const std::atomic_bool* cancel);
+	// deletes the files of a title (folder or file) and refreshes the list
+	bool DeleteTitle(const std::string& path);
+
+	enum class WuaStage
+	{
+		kIdle,
+		kStarting,
+		kCollectingFiles,
+		kCompressing,
+		kFinalizing,
+		kFinished,
+		kCancelled,
+		kError
+	};
+	struct WuaProgress
+	{
+		WuaStage stage = WuaStage::kIdle;
+		uint64_t done = 0, total = 0;
+	};
+	// the base title, its update and its DLC are put in one archive. uid selects the copy to use when a title is present several times
+	std::string GetWuaSuggestedName(uint64_t titleId, uint64_t uid);
+	bool StartWuaConversion(uint64_t titleId, uint64_t uid, const std::string& outputFile);
+	WuaProgress GetWuaProgress();
+	void CancelWuaConversion();
+
 	// ---- emulated USB devices: Skylanders portal, Disney Infinity base, LEGO Dimensions toypad
 	// (ported from the Android port, NativeEmulatedUSBDevices.cpp). Enable them with the settings
 	// "usb_skylander", "usb_infinity" and "usb_dimensions" ----

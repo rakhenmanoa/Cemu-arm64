@@ -97,8 +97,11 @@ Controller::~Controller()
 	MobileBackend::SetGameListChangedCallback(nullptr);
 	MobileBackend::SetGameExitedCallback(nullptr);
 	m_downloadCancel = true;
+	m_installCancel = true;
 	if (m_downloadThread.joinable())
 		m_downloadThread.join();
+	if (m_installThread.joinable())
+		m_installThread.join();
 }
 
 QAbstractItemModel* Controller::games() const
@@ -223,6 +226,155 @@ void Controller::endSession()
 	// Only reached if the restart failed. Leave without running static destructors: the Vulkan swapchain
 	// still references this window's surface and tearing both down in arbitrary order can crash.
 	::_exit(0);
+}
+
+// ---- title manager ----
+
+namespace
+{
+	quint64 ParseTitleId(const QString& titleId)
+	{
+		bool ok = false;
+		const quint64 id = titleId.toULongLong(&ok, 16);
+		return ok ? id : 0;
+	}
+
+	QString LocalPath(const QUrl& url)
+	{
+		return url.isLocalFile() ? url.toLocalFile() : url.toString();
+	}
+} // namespace
+
+QVariantList Controller::titleEntries() const
+{
+	QVariantList result;
+	for (const auto& t : MobileBackend::GetTitleEntries())
+	{
+		QVariantMap m;
+		m[QStringLiteral("titleId")] = QString::number(t.titleId, 16).rightJustified(16, QLatin1Char('0'));
+		m[QStringLiteral("uid")] = QString::number(t.uid, 16);
+		m[QStringLiteral("name")] = QString::fromStdString(t.name);
+		m[QStringLiteral("path")] = QString::fromStdString(t.path);
+		m[QStringLiteral("inMlc")] = t.inMlc;
+		m[QStringLiteral("version")] = t.version;
+		m[QStringLiteral("region")] = QString::fromStdString(t.region);
+		m[QStringLiteral("type")] = t.type;
+		m[QStringLiteral("format")] = t.format;
+		result.push_back(m);
+	}
+	return result;
+}
+
+QVariantMap Controller::checkInstallTitle(const QUrl& folder) const
+{
+	using C = MobileBackend::InstallCheck;
+	const auto info = MobileBackend::CheckInstallTitle(LocalPath(folder).toStdString());
+	QString status;
+	switch (info.check)
+	{
+	case C::kOk: status = QStringLiteral("ok"); break;
+	case C::kOverwrite: status = QStringLiteral("overwrite"); break;
+	case C::kSameVersion: status = QStringLiteral("sameVersion"); break;
+	case C::kNewerInstalled: status = QStringLiteral("newerInstalled"); break;
+	case C::kDifferentType: status = QStringLiteral("differentType"); break;
+	default: status = QStringLiteral("invalid"); break;
+	}
+	QVariantMap m;
+	m[QStringLiteral("status")] = status;
+	m[QStringLiteral("name")] = QString::fromStdString(info.name);
+	m[QStringLiteral("target")] = QString::fromStdString(info.targetPath);
+	return m;
+}
+
+void Controller::installTitle(const QUrl& folder)
+{
+	if (m_installingTitle)
+		return;
+	if (m_installThread.joinable())
+		m_installThread.join();
+	const std::string source = LocalPath(folder).toStdString();
+	m_installCancel = false;
+	m_installingTitle = true;
+	m_titleInstallProgress = 0.0;
+	Q_EMIT titleInstallChanged();
+	m_installThread = std::thread([this, source] {
+		const auto result = MobileBackend::InstallTitle(
+			source,
+			[this](uint64_t done, uint64_t total) {
+				QMetaObject::invokeMethod(this, [this, done, total] {
+					m_titleInstallProgress = total ? (double)done / (double)total : 0.0;
+					Q_EMIT titleInstallChanged();
+				}, Qt::QueuedConnection);
+			},
+			&m_installCancel);
+		QString text;
+		switch (result)
+		{
+		case MobileBackend::InstallResult::kFinished: text = QStringLiteral("finished"); break;
+		case MobileBackend::InstallResult::kNotEnoughSpace: text = QStringLiteral("notEnoughSpace"); break;
+		case MobileBackend::InstallResult::kCancelled: text = QStringLiteral("cancelled"); break;
+		default: text = QStringLiteral("error"); break;
+		}
+		QMetaObject::invokeMethod(this, [this, text] {
+			m_installingTitle = false;
+			Q_EMIT titleInstallChanged();
+			Q_EMIT titleInstallFinished(text);
+		}, Qt::QueuedConnection);
+	});
+}
+
+void Controller::cancelTitleInstall()
+{
+	m_installCancel = true;
+}
+
+bool Controller::deleteTitle(const QString& path)
+{
+	const bool ok = MobileBackend::DeleteTitle(path.toStdString());
+	if (!ok)
+		Q_EMIT errorOccurred(tr("Could not delete the title"));
+	return ok;
+}
+
+QString Controller::wuaSuggestedName(const QString& titleId, const QString& uid) const
+{
+	return QString::fromStdString(MobileBackend::GetWuaSuggestedName(ParseTitleId(titleId), uid.toULongLong(nullptr, 16)));
+}
+
+bool Controller::startWuaConversion(const QString& titleId, const QString& uid, const QUrl& outputFile)
+{
+	const bool ok = MobileBackend::StartWuaConversion(ParseTitleId(titleId), uid.toULongLong(nullptr, 16), LocalPath(outputFile).toStdString());
+	if (!ok)
+		Q_EMIT errorOccurred(tr("A conversion is already running"));
+	return ok;
+}
+
+QVariantMap Controller::wuaProgress() const
+{
+	using S = MobileBackend::WuaStage;
+	const auto p = MobileBackend::GetWuaProgress();
+	QString stage;
+	switch (p.stage)
+	{
+	case S::kStarting: stage = QStringLiteral("starting"); break;
+	case S::kCollectingFiles: stage = QStringLiteral("collecting"); break;
+	case S::kCompressing: stage = QStringLiteral("compressing"); break;
+	case S::kFinalizing: stage = QStringLiteral("finalizing"); break;
+	case S::kFinished: stage = QStringLiteral("finished"); break;
+	case S::kCancelled: stage = QStringLiteral("cancelled"); break;
+	case S::kError: stage = QStringLiteral("error"); break;
+	default: stage = QStringLiteral("idle"); break;
+	}
+	QVariantMap m;
+	m[QStringLiteral("stage")] = stage;
+	m[QStringLiteral("done")] = static_cast<double>(p.done);
+	m[QStringLiteral("total")] = static_cast<double>(p.total);
+	return m;
+}
+
+void Controller::cancelWuaConversion()
+{
+	MobileBackend::CancelWuaConversion();
 }
 
 // ---- emulated USB devices ----
@@ -553,15 +705,6 @@ void Controller::shutdown()
 
 // ---------------------------------------------------------------- settings
 
-namespace
-{
-	quint64 ParseTitleId(const QString& titleId)
-	{
-		bool ok = false;
-		const quint64 id = titleId.toULongLong(&ok, 16);
-		return ok ? id : 0;
-	}
-} // namespace
 
 int Controller::setting(const QString& key) const
 {

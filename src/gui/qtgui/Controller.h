@@ -25,6 +25,8 @@ class Controller : public QObject
 	Q_PROPERTY(bool gameRunning READ gameRunning NOTIFY gameRunningChanged)
 	Q_PROPERTY(QStringList gamePaths READ gamePaths NOTIFY gamePathsChanged)
 	Q_PROPERTY(QString version READ version CONSTANT)
+	Q_PROPERTY(bool installingTitle READ installingTitle NOTIFY titleInstallChanged)
+	Q_PROPERTY(double titleInstallProgress READ titleInstallProgress NOTIFY titleInstallChanged)
 	Q_PROPERTY(bool downloadingGraphicPacks READ downloadingGraphicPacks NOTIFY graphicPackDownloadChanged)
 	Q_PROPERTY(QString graphicPackDownloadText READ graphicPackDownloadText NOTIFY graphicPackDownloadChanged)
 	Q_PROPERTY(double graphicPackDownloadProgress READ graphicPackDownloadProgress NOTIFY graphicPackDownloadChanged)
@@ -38,6 +40,8 @@ class Controller : public QObject
 	bool gameRunning() const { return m_gameRunning; }
 	QStringList gamePaths() const;
 	QString version() const;
+	bool installingTitle() const { return m_installingTitle; }
+	double titleInstallProgress() const { return m_titleInstallProgress; }
 	bool downloadingGraphicPacks() const { return m_downloadingPacks; }
 	QString graphicPackDownloadText() const { return m_downloadText; }
 	double graphicPackDownloadProgress() const { return m_downloadProgress; }
@@ -78,6 +82,18 @@ class Controller : public QObject
 	Q_INVOKABLE void downloadGraphicPacks();
 	Q_INVOKABLE void cancelGraphicPackDownload();
 
+	// title manager. type: 0 base, 1 update, 2 DLC, 3 system. format: 0 folder, 1 WUD/WUX, 2 WUA, 3 NUS, 4 WUHB
+	Q_INVOKABLE QVariantList titleEntries() const; // [{titleId, uid, name, path, inMlc, version, region, type, format}]
+	// {status: invalid|ok|overwrite|sameVersion|newerInstalled|differentType, name, target}
+	Q_INVOKABLE QVariantMap checkInstallTitle(const QUrl& folder) const;
+	Q_INVOKABLE void installTitle(const QUrl& folder);
+	Q_INVOKABLE void cancelTitleInstall();
+	Q_INVOKABLE bool deleteTitle(const QString& path);
+	Q_INVOKABLE QString wuaSuggestedName(const QString& titleId, const QString& uid) const;
+	Q_INVOKABLE bool startWuaConversion(const QString& titleId, const QString& uid, const QUrl& outputFile);
+	Q_INVOKABLE QVariantMap wuaProgress() const; // {stage: idle|starting|collecting|compressing|finalizing|finished|cancelled|error, done, total}
+	Q_INVOKABLE void cancelWuaConversion();
+
 	// emulated USB devices. kind: 0 Skylanders portal, 1 Infinity base, 2 Dimensions toypad
 	Q_INVOKABLE QVariantList usbFigureSlots(int kind) const;	  // [{slot, name}] name empty = nothing loaded
 	Q_INVOKABLE QVariantList usbFigureCatalog(int kind) const;	  // [{number, variant, name}] figures that can be created
@@ -115,6 +131,8 @@ class Controller : public QObject
 	void inputChanged();
 	void accountsChanged();
 	void usbDevicesChanged();
+	void titleInstallChanged();
+	void titleInstallFinished(const QString& result); // finished|error|notEnoughSpace|cancelled
 	void graphicPackDownloadChanged();
 	void errorOccurred(const QString& message);
 
@@ -141,4 +159,8 @@ class Controller : public QObject
 	double m_downloadProgress = 0.0;
 	std::atomic_bool m_downloadCancel = false;
 	std::thread m_downloadThread;
+	bool m_installingTitle = false;
+	double m_titleInstallProgress = 0.0;
+	std::atomic_bool m_installCancel = false;
+	std::thread m_installThread;
 };

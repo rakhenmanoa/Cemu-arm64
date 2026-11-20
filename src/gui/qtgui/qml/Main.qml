@@ -64,6 +64,10 @@ ApplicationWindow {
                         onTriggered: stack.push(controllersPage)
                     }
                     MenuItem {
+                        text: qsTr("Title manager")
+                        onTriggered: stack.push(titleManagerPage)
+                    }
+                    MenuItem {
                         text: qsTr("Graphic packs")
                         onTriggered: stack.push(graphicPacksHomePage)
                     }
@@ -153,6 +157,11 @@ ApplicationWindow {
     Component {
         id: controllersPage
         ControllersPage {}
+    }
+
+    Component {
+        id: titleManagerPage
+        TitleManagerPage {}
     }
 
     Component {
