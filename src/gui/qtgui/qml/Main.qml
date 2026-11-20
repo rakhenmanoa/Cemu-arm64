@@ -64,6 +64,10 @@ ApplicationWindow {
                         onTriggered: stack.push(controllersPage)
                     }
                     MenuItem {
+                        text: qsTr("Accounts")
+                        onTriggered: stack.push(accountsPage)
+                    }
+                    MenuItem {
                         text: qsTr("Settings")
                         onTriggered: stack.push(settingsPage)
                     }
@@ -137,6 +141,11 @@ ApplicationWindow {
     Component {
         id: controllersPage
         ControllersPage {}
+    }
+
+    Component {
+        id: accountsPage
+        AccountsPage {}
     }
 
     Component {

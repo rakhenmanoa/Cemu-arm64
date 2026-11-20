@@ -9,6 +9,7 @@ What it does today:
 - game list (grid with icons), refresh, launch
 - game folder management
 - controllers: pick the SDL controller for player 1, default mapping, live button test
+- accounts: list, active account, create / edit / delete, network service, online files check (ported from the Android port)
 - navigation with a gamepad (D-pad / left stick, A = select, B = back, Y = game menu)
 - full screen Vulkan render window with keyboard, mouse and touch forwarding
 
@@ -23,6 +24,7 @@ configuration files.
 | `MobileBackend.*` | Bridge to the emulator core. Standard C++ types only, no Qt. |
 | `QtMobileUI.*` | Entry point, creates the Qt application and the QML engine. |
 | `Controller.*` | Object exposed to QML as `cemu`. |
+| `MobileAccounts.cpp` | Accounts part of the bridge. |
 | `GameListModel.*` | List model behind the game grid. |
 | `GameWindow.*` | Native window the emulator renders into. |
 | `qml/` | The pages. |

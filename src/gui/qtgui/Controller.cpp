@@ -222,6 +222,186 @@ void Controller::endSession()
 	::_exit(0);
 }
 
+// ---- accounts ----
+
+QVariantList Controller::accounts() const
+{
+	QVariantList result;
+	for (const auto& a : MobileBackend::GetAccounts())
+	{
+		QVariantMap m;
+		m[QStringLiteral("id")] = static_cast<double>(a.persistentId);
+		m[QStringLiteral("miiName")] = QString::fromStdString(a.miiName);
+		m[QStringLiteral("birthYear")] = a.birthYear;
+		m[QStringLiteral("birthMonth")] = a.birthMonth;
+		m[QStringLiteral("birthDay")] = a.birthDay;
+		m[QStringLiteral("gender")] = a.gender;
+		m[QStringLiteral("email")] = QString::fromStdString(a.email);
+		m[QStringLiteral("country")] = a.country;
+		m[QStringLiteral("valid")] = a.validOnline;
+		result.push_back(m);
+	}
+	return result;
+}
+
+QVariantList Controller::accountCountries() const
+{
+	QVariantList result;
+	for (const auto& c : MobileBackend::GetAccountCountries())
+	{
+		QVariantMap m;
+		m[QStringLiteral("index")] = c.index;
+		m[QStringLiteral("name")] = QString::fromStdString(c.name);
+		result.push_back(m);
+	}
+	return result;
+}
+
+double Controller::activeAccountId() const
+{
+	return MobileBackend::GetActiveAccountId();
+}
+
+void Controller::setActiveAccount(double id)
+{
+	MobileBackend::SetActiveAccountId(static_cast<uint32_t>(id));
+	Q_EMIT accountsChanged();
+}
+
+int Controller::accountNetworkService(double id) const
+{
+	return MobileBackend::GetAccountNetworkService(static_cast<uint32_t>(id));
+}
+
+void Controller::setAccountNetworkService(double id, int service)
+{
+	MobileBackend::SetAccountNetworkService(static_cast<uint32_t>(id), service);
+	Q_EMIT accountsChanged();
+}
+
+bool Controller::createAccount(const QString& hexId, const QString& miiName)
+{
+	bool parsed = false;
+	QString digits = hexId.trimmed();
+	if (digits.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive))
+		digits = digits.mid(2);
+	const qulonglong id = digits.toULongLong(&parsed, 16);
+	if (!parsed || id > 0xFFFFFFFFull)
+	{
+		Q_EMIT errorOccurred(tr("The persistent id must be a hexadecimal number (for example 80000002)"));
+		return false;
+	}
+	if (id < MobileBackend::kMinPersistentId)
+	{
+		Q_EMIT errorOccurred(tr("The persistent id must be at least 80000001"));
+		return false;
+	}
+	if (miiName.trimmed().isEmpty())
+	{
+		Q_EMIT errorOccurred(tr("The account name may not be empty"));
+		return false;
+	}
+	std::string error;
+	if (!MobileBackend::CreateAccount(static_cast<uint32_t>(id), miiName.trimmed().toStdString(), error))
+	{
+		Q_EMIT errorOccurred(tr("Could not create the account: %1").arg(QString::fromStdString(error)));
+		return false;
+	}
+	Q_EMIT accountsChanged();
+	return true;
+}
+
+double Controller::suggestedAccountId() const
+{
+	uint32_t id = MobileBackend::kMinPersistentId;
+	bool used = true;
+	const auto accounts = MobileBackend::GetAccounts();
+	while (used)
+	{
+		used = false;
+		for (const auto& a : accounts)
+		{
+			if (a.persistentId == id)
+			{
+				used = true;
+				++id;
+				break;
+			}
+		}
+	}
+	return id;
+}
+
+void Controller::saveAccount(const QVariantMap& account)
+{
+	MobileBackend::AccountEntry a;
+	a.persistentId = static_cast<uint32_t>(account.value(QStringLiteral("id")).toDouble());
+	a.miiName = account.value(QStringLiteral("miiName")).toString().toStdString();
+	a.birthYear = account.value(QStringLiteral("birthYear")).toInt();
+	a.birthMonth = account.value(QStringLiteral("birthMonth")).toInt();
+	a.birthDay = account.value(QStringLiteral("birthDay")).toInt();
+	a.gender = account.value(QStringLiteral("gender")).toInt();
+	a.email = account.value(QStringLiteral("email")).toString().toStdString();
+	a.country = account.value(QStringLiteral("country")).toInt();
+	if (!MobileBackend::SaveAccount(a))
+		Q_EMIT errorOccurred(tr("Could not save the account"));
+	Q_EMIT accountsChanged();
+}
+
+bool Controller::deleteAccount(double id)
+{
+	const bool ok = MobileBackend::DeleteAccount(static_cast<uint32_t>(id));
+	if (!ok)
+		Q_EMIT errorOccurred(tr("Could not delete the account (at least one account must remain)"));
+	Q_EMIT accountsChanged();
+	return ok;
+}
+
+bool Controller::otpPresent() const
+{
+	return MobileBackend::IsOTPPresent();
+}
+
+bool Controller::seepromPresent() const
+{
+	return MobileBackend::IsSEEPROMPresent();
+}
+
+int Controller::maxAccountCount() const
+{
+	return MobileBackend::kMaxAccountCount;
+}
+
+QStringList Controller::accountValidationErrors(double id) const
+{
+	QStringList result;
+	for (const std::string& e : MobileBackend::GetAccountValidationErrors(static_cast<uint32_t>(id)))
+	{
+		const QString code = QString::fromStdString(e);
+		if (code == QLatin1String("missingOTP"))
+			result << tr("otp.bin is missing");
+		else if (code == QLatin1String("corruptedOTP"))
+			result << tr("otp.bin is corrupted");
+		else if (code == QLatin1String("missingSEEPROM"))
+			result << tr("seeprom.bin is missing");
+		else if (code == QLatin1String("corruptedSEEPROM"))
+			result << tr("seeprom.bin is corrupted");
+		else if (code.startsWith(QLatin1String("missingFile:")))
+			result << tr("Missing file: %1").arg(code.mid(12));
+		else if (code == QLatin1String("accountError:1"))
+			result << tr("AccountId missing (the account is not connected to a NNID/PNID)");
+		else if (code == QLatin1String("accountError:2"))
+			result << tr("AccountPasswordCache is missing (the remember password option must be enabled on the Wii U for this account before dumping it)");
+		else if (code == QLatin1String("accountError:3"))
+			result << tr("AccountPasswordCache is empty (the remember password option must be enabled on the Wii U for this account before dumping it)");
+		else if (code == QLatin1String("accountError:4"))
+			result << tr("PrincipalId missing");
+		else
+			result << code;
+	}
+	return result;
+}
+
 void Controller::shutdown()
 {
 	m_scanPollTimer.stop();

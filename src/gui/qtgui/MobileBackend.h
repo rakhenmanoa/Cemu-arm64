@@ -140,6 +140,42 @@ namespace MobileBackend
 	// Wii U buttons currently held on this slot, for the test screen
 	std::vector<InputPressedButton> GetPressedInputButtons(int player);
 
+	// ---- accounts (stored like the desktop interface: mlc01/usr/save/system/act/<id>/account.dat) ----
+	struct AccountEntry
+	{
+		uint32_t persistentId = 0;
+		std::string miiName;
+		int birthYear = 0, birthMonth = 0, birthDay = 0;
+		int gender = 0; // 0 = female, 1 = male
+		std::string email;
+		int country = 0; // index in GetAccountCountries()
+		bool validOnline = false;
+	};
+	struct AccountCountry
+	{
+		int index = 0;
+		std::string name; // two letter code
+	};
+	constexpr int kMaxAccountCount = 12;
+	constexpr uint32_t kMinPersistentId = 0x80000001;
+	std::vector<AccountEntry> GetAccounts();
+	std::vector<AccountCountry> GetAccountCountries();
+	// returns false and sets errorOut if the account can not be created (bad id, already used, ...)
+	bool CreateAccount(uint32_t persistentId, const std::string& miiName, std::string& errorOut);
+	bool SaveAccount(const AccountEntry& account);
+	// refuses to delete the last account
+	bool DeleteAccount(uint32_t persistentId);
+	uint32_t GetActiveAccountId();
+	void SetActiveAccountId(uint32_t persistentId);
+	int GetAccountNetworkService(uint32_t persistentId); // 0 offline, 1 Nintendo, 2 Pretendo, 3 custom
+	void SetAccountNetworkService(uint32_t persistentId, int service);
+	bool IsOTPPresent();
+	bool IsSEEPROMPresent();
+	// problems that prevent the account from going online. Each entry is "missingOTP", "corruptedOTP", "missingSEEPROM",
+	// "corruptedSEEPROM", "missingFile:<path>" or "accountError:<1..4>" (1 no account id, 2 no password cached,
+	// 3 password cache empty, 4 no principal id). Empty = ok
+	std::vector<std::string> GetAccountValidationErrors(uint32_t persistentId);
+
 	// ---- navigation of the interface with a gamepad ----
 	enum NavAction
 	{

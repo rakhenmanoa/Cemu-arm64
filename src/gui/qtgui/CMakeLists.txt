@@ -11,6 +11,7 @@ find_package(Qt6 QUIET OPTIONAL_COMPONENTS GuiPrivate)
 
 add_library(CemuQtBridge STATIC
   MobileBackend.cpp
+  MobileAccounts.cpp
   MobileBackend.h
 )
 

@@ -62,6 +62,23 @@ class Controller : public QObject
 	Q_INVOKABLE bool resetInputMapping(int player);
 	Q_INVOKABLE QVariantList pressedInputButtons(int player) const; // [{id, name, device}]
 
+	// accounts. ids are the persistent ids (0x80000001 and up)
+	// [{id, miiName, birthYear, birthMonth, birthDay, gender, email, country, valid}]
+	Q_INVOKABLE QVariantList accounts() const;
+	Q_INVOKABLE QVariantList accountCountries() const; // [{index, name}]
+	Q_INVOKABLE double activeAccountId() const;
+	Q_INVOKABLE void setActiveAccount(double id);
+	Q_INVOKABLE int accountNetworkService(double id) const; // 0 offline, 1 Nintendo, 2 Pretendo, 3 custom
+	Q_INVOKABLE void setAccountNetworkService(double id, int service);
+	Q_INVOKABLE bool createAccount(const QString& hexId, const QString& miiName); // false: error signal emitted
+	Q_INVOKABLE double suggestedAccountId() const; // first free id
+	Q_INVOKABLE void saveAccount(const QVariantMap& account);
+	Q_INVOKABLE bool deleteAccount(double id);
+	Q_INVOKABLE bool otpPresent() const;
+	Q_INVOKABLE bool seepromPresent() const;
+	Q_INVOKABLE QStringList accountValidationErrors(double id) const; // translated, empty = ok
+	Q_INVOKABLE int maxAccountCount() const;
+
 	// stops the emulator. Must be called while the render window still exists
 	void shutdown();
 
@@ -71,6 +88,7 @@ class Controller : public QObject
 	void gameRunningChanged();
 	void gamePathsChanged();
 	void inputChanged();
+	void accountsChanged();
 	void errorOccurred(const QString& message);
 
   private:
