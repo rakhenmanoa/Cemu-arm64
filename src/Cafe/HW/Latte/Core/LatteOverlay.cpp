@@ -1,4 +1,5 @@
 #include "Cafe/HW/Latte/Core/LatteOverlay.h"
+#include "Cafe/HW/Latte/Core/LatteTouchGamepad.h"
 #include "Cafe/HW/Latte/Core/LattePerformanceMonitor.h"
 #include "Cafe/HW/Latte/Renderer/Renderer.h"
 #include "Cafe/Account/Account.h"
@@ -517,6 +518,13 @@ void LatteOverlay_translateScreenPosition(ScreenPosition pos, const Vector2f& wi
 void LatteOverlay_render(bool pad_view)
 {
 	const auto& config = GetConfig();
+	// on-screen gamepad of the mobile interface (does nothing unless it is enabled)
+	if (!pad_view)
+	{
+		sint32 gw = 0, gh = 0;
+		WindowSystem::GetWindowPhysSize(gw, gh);
+		LatteTouchGamepad::Render(gw, gh);
+	}
 	if(config.overlay.position == ScreenPosition::kDisabled && config.notification.position == ScreenPosition::kDisabled)
 		return;
 

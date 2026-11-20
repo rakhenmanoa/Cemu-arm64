@@ -336,6 +336,7 @@ namespace MobileBackend
 		}
 		// connect the controllers of the saved profiles now: SDL may have announced them before the profiles were loaded
 		InputManager::instance().on_device_changed();
+		SyncTouchGamepad();
 		if (!g_vulkan_available)
 		{
 			errorOut = "Vulkan is not available on this device.";

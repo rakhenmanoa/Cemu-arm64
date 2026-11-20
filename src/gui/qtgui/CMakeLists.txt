@@ -15,6 +15,7 @@ add_library(CemuQtBridge STATIC
   MobileGraphicPackDownload.cpp
   MobileUSBDevices.cpp
   MobileTitles.cpp
+  MobileTouchGamepad.cpp
   MobileBackend.h
 )
 

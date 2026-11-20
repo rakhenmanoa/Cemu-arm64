@@ -19,6 +19,14 @@ Item {
         devices = cemu.availableInputDevices()
     }
 
+    function hasKeyboard() {
+        for (var i = 0; i < player0.devices.length; i++) {
+            if (player0.devices[i].api === "Keyboard")
+                return true
+        }
+        return false
+    }
+
     function isAssigned(uuid) {
         for (var i = 0; i < player0.devices.length; i++) {
             if (player0.devices[i].uuid === uuid)
@@ -98,6 +106,30 @@ Item {
                         cemu.setInputPlayerType(page.player, index === 0 ? "" : cemu.inputTypes()[index - 1])
                     }
                 }
+            }
+
+            SwitchDelegate {
+                id: touchSwitch
+                Layout.fillWidth: true
+                leftPadding: 16
+                rightPadding: 16
+                visible: page.player0.enabled && page.player0.type === cemu.inputTypes()[0]
+                text: qsTr("On-screen gamepad")
+                checked: page.hasKeyboard()
+                onToggled: {
+                    if (!cemu.setTouchGamepadEnabled(checked))
+                        checked = Qt.binding(function() { return page.hasKeyboard() })
+                }
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                visible: touchSwitch.visible
+                wrapMode: Text.Wrap
+                font.pixelSize: 12
+                opacity: 0.6
+                text: qsTr("Shows buttons and sticks over the game, usable with the touch screen. The sticks are digital (8 directions).")
             }
 
             SectionHeader { text: qsTr("ASSIGNED CONTROLLER") }

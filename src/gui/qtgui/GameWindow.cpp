@@ -146,19 +146,22 @@ void GameWindow::mouseMoveEvent(QMouseEvent* event)
 
 void GameWindow::touchEvent(QTouchEvent* event)
 {
-	const auto& points = event->points();
-	if (points.isEmpty())
-	{
-		event->accept();
-		return;
-	}
-	// the Wii U GamePad screen is single-touch: follow the first touch point
-	const QEventPoint& point = points.first();
+	// every finger goes to the backend: with the on-screen gamepad some of them drive the controls, the first other
+	// one is the single-touch Wii U GamePad screen
 	const qreal dpr = devicePixelRatio();
-	const QPointF pos = point.position() * dpr;
-	const bool down = event->type() != QEvent::TouchEnd && event->type() != QEvent::TouchCancel &&
-					  point.state() != QEventPoint::Released;
-	MobileBackend::SetTouch(static_cast<int>(pos.x()), static_cast<int>(pos.y()), down);
+	const bool ending = event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel;
+	std::vector<MobileBackend::TouchPoint> points;
+	for (const QEventPoint& point : event->points())
+	{
+		const QPointF pos = point.position() * dpr;
+		MobileBackend::TouchPoint p;
+		p.id = point.id();
+		p.x = static_cast<int>(pos.x());
+		p.y = static_cast<int>(pos.y());
+		p.down = !ending && point.state() != QEventPoint::Released;
+		points.push_back(p);
+	}
+	MobileBackend::SetTouchPoints(points);
 	event->accept();
 }
 

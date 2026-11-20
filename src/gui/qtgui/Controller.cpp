@@ -228,6 +228,23 @@ void Controller::endSession()
 	::_exit(0);
 }
 
+// ---- on-screen gamepad ----
+
+bool Controller::touchGamepadEnabled() const
+{
+	return MobileBackend::IsTouchGamepadEnabled(0);
+}
+
+bool Controller::setTouchGamepadEnabled(bool enabled)
+{
+	std::string error;
+	const bool ok = MobileBackend::SetTouchGamepadEnabled(0, enabled, error);
+	if (!ok)
+		Q_EMIT errorOccurred(QString::fromStdString(error));
+	Q_EMIT inputChanged();
+	return ok;
+}
+
 // ---- title manager ----
 
 namespace

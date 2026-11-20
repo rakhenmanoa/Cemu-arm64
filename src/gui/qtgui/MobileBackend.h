@@ -69,6 +69,15 @@ namespace MobileBackend
 	void ReleaseAllKeys();
 	void SetMouse(int physX, int physY, bool leftDown, bool rightDown);
 	void SetTouch(int physX, int physY, bool down);
+	// all the fingers on the game window (physical pixels). With the on-screen gamepad enabled, the fingers that start on
+	// a control drive it, the first other finger is the GamePad touch screen
+	struct TouchPoint
+	{
+		int id = 0;
+		int x = 0, y = 0;
+		bool down = false;
+	};
+	void SetTouchPoints(const std::vector<TouchPoint>& points);
 
 	std::string GetVersionString();
 
@@ -293,6 +302,13 @@ namespace MobileBackend
 	// "corruptedSEEPROM", "missingFile:<path>" or "accountError:<1..4>" (1 no account id, 2 no password cached,
 	// 3 password cache empty, 4 no principal id). Empty = ok
 	std::vector<std::string> GetAccountValidationErrors(uint32_t persistentId);
+
+	// ---- on-screen gamepad (ported from the Android port, input overlay). It is the "Keyboard" device of the player, whose
+	// virtual keys are pressed by the controls. Only for the Wii U GamePad controller type. Saved in the controller profile ----
+	bool IsTouchGamepadEnabled(int player);
+	bool SetTouchGamepadEnabled(int player, bool enabled, std::string& errorOut);
+	// shows the gamepad when player 1 has the keyboard device (called when a game starts)
+	void SyncTouchGamepad();
 
 	// ---- navigation of the interface with a gamepad ----
 	enum NavAction

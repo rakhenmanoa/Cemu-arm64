@@ -82,6 +82,10 @@ class Controller : public QObject
 	Q_INVOKABLE void downloadGraphicPacks();
 	Q_INVOKABLE void cancelGraphicPackDownload();
 
+	// on-screen gamepad on top of the game (player 1, Wii U GamePad type only)
+	Q_INVOKABLE bool touchGamepadEnabled() const;
+	Q_INVOKABLE bool setTouchGamepadEnabled(bool enabled); // false: error signal emitted
+
 	// title manager. type: 0 base, 1 update, 2 DLC, 3 system. format: 0 folder, 1 WUD/WUX, 2 WUA, 3 NUS, 4 WUHB
 	Q_INVOKABLE QVariantList titleEntries() const; // [{titleId, uid, name, path, inMlc, version, region, type, format}]
 	// {status: invalid|ok|overwrite|sameVersion|newerInstalled|differentType, name, target}
