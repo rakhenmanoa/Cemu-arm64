@@ -392,8 +392,7 @@ namespace MobileBackend
 				if (ok)
 				{
 					// check that the archive can be opened
-					auto stream = std::make_unique<std::ifstream>(outputFile, std::ios::binary);
-					ZArchiveReader* reader = ZArchiveReader::OpenFromStream(std::move(stream));
+					ZArchiveReader* reader = ZArchiveReader::OpenFromFile(outputFile);
 					ok = reader != nullptr;
 					delete reader;
 				}
