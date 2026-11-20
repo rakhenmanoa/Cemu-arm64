@@ -6,6 +6,7 @@
 // Cemu side never includes Qt headers. Both pull in a lot of macros/types (X11, GTK, uint32, signals/slots, ..)
 // which clash when mixed in a single translation unit.
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -139,6 +140,24 @@ namespace MobileBackend
 	bool ResetInputMapping(int player, std::string& errorOut);
 	// Wii U buttons currently held on this slot, for the test screen
 	std::vector<InputPressedButton> GetPressedInputButtons(int player);
+
+	// ---- graphic packs download (ported from the Android port, GraphicPacksDownloader.kt) ----
+	enum class GraphicPackDownloadStatus
+	{
+		kCheckingVersion,
+		kNoUpdateAvailable,
+		kDownloading, // progress = 0..1
+		kExtracting,  // progress = 0..1
+		kFinished,
+		kError,
+		kCancelled
+	};
+	// blocking, run it from a worker thread. The callback is called from that thread.
+	// Returns the last status. Set *cancel to true to abort (checked between steps and while downloading)
+	GraphicPackDownloadStatus DownloadGraphicPacks(const std::function<void(GraphicPackDownloadStatus, double)>& progress,
+												   const std::atomic_bool* cancel);
+	// reloads the graphic pack list from disk. Does nothing while a title runs
+	void ReloadGraphicPacks();
 
 	// ---- accounts (stored like the desktop interface: mlc01/usr/save/system/act/<id>/account.dat) ----
 	struct AccountEntry

@@ -64,6 +64,10 @@ ApplicationWindow {
                         onTriggered: stack.push(controllersPage)
                     }
                     MenuItem {
+                        text: qsTr("Graphic packs")
+                        onTriggered: stack.push(graphicPacksHomePage)
+                    }
+                    MenuItem {
                         text: qsTr("Accounts")
                         onTriggered: stack.push(accountsPage)
                     }
@@ -145,6 +149,13 @@ ApplicationWindow {
     Component {
         id: controllersPage
         ControllersPage {}
+    }
+
+    Component {
+        id: graphicPacksHomePage
+        GraphicPacksHomePage {
+            onOpenUniversal: stack.push(graphicPacksPage, {"titleId": "universal", "gameName": qsTr("All games")})
+        }
     }
 
     Component {

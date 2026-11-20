@@ -12,12 +12,13 @@ find_package(Qt6 QUIET OPTIONAL_COMPONENTS GuiPrivate)
 add_library(CemuQtBridge STATIC
   MobileBackend.cpp
   MobileAccounts.cpp
+  MobileGraphicPackDownload.cpp
   MobileBackend.h
 )
 
 cemu_use_precompiled_header(CemuQtBridge)
 
-target_include_directories(CemuQtBridge PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" PRIVATE "../" "../interface")
+target_include_directories(CemuQtBridge PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" PRIVATE "../" "../interface" ${RAPIDJSON_INCLUDE_DIRS})
 
 target_link_libraries(CemuQtBridge PRIVATE
   CemuCommon

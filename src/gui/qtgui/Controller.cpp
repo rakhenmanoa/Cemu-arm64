@@ -96,6 +96,9 @@ Controller::~Controller()
 {
 	MobileBackend::SetGameListChangedCallback(nullptr);
 	MobileBackend::SetGameExitedCallback(nullptr);
+	m_downloadCancel = true;
+	if (m_downloadThread.joinable())
+		m_downloadThread.join();
 }
 
 QAbstractItemModel* Controller::games() const
@@ -402,6 +405,56 @@ QStringList Controller::accountValidationErrors(double id) const
 	return result;
 }
 
+// ---- graphic packs download ----
+
+void Controller::downloadGraphicPacks()
+{
+	if (m_downloadingPacks)
+		return;
+	if (m_downloadThread.joinable())
+		m_downloadThread.join();
+	m_downloadCancel = false;
+	setDownloadState(true, MobileBackend::GraphicPackDownloadStatus::kCheckingVersion, 0.0);
+	m_downloadThread = std::thread([this] {
+		MobileBackend::DownloadGraphicPacks(
+			[this](MobileBackend::GraphicPackDownloadStatus status, double progress) {
+				QMetaObject::invokeMethod(this, [this, status, progress] {
+					const bool done = status == MobileBackend::GraphicPackDownloadStatus::kNoUpdateAvailable ||
+									  status == MobileBackend::GraphicPackDownloadStatus::kFinished ||
+									  status == MobileBackend::GraphicPackDownloadStatus::kError ||
+									  status == MobileBackend::GraphicPackDownloadStatus::kCancelled;
+					setDownloadState(!done, status, progress);
+				}, Qt::QueuedConnection);
+			},
+			&m_downloadCancel);
+	});
+}
+
+void Controller::cancelGraphicPackDownload()
+{
+	m_downloadCancel = true;
+}
+
+void Controller::setDownloadState(bool running, MobileBackend::GraphicPackDownloadStatus status, double progress)
+{
+	using S = MobileBackend::GraphicPackDownloadStatus;
+	QString text;
+	switch (status)
+	{
+	case S::kCheckingVersion: text = tr("Checking version..."); break;
+	case S::kNoUpdateAvailable: text = tr("No updates available."); break;
+	case S::kDownloading: text = tr("Downloading..."); break;
+	case S::kExtracting: text = tr("Extracting..."); break;
+	case S::kFinished: text = tr("Graphic packs downloaded."); break;
+	case S::kError: text = tr("Failed to download the graphic packs."); break;
+	case S::kCancelled: text = tr("Cancelled."); break;
+	}
+	m_downloadingPacks = running;
+	m_downloadText = text;
+	m_downloadProgress = progress;
+	Q_EMIT graphicPackDownloadChanged();
+}
+
 void Controller::shutdown()
 {
 	m_scanPollTimer.stop();
@@ -467,8 +520,10 @@ int Controller::removeShaderCaches(const QString& titleId)
 QVariantList Controller::graphicPacks(const QString& titleId) const
 {
 	QVariantList result;
-	const quint64 id = ParseTitleId(titleId);
-	if (!id)
+	// "universal" = the packs that apply to every game
+	const bool universal = titleId == QLatin1String("universal");
+	const quint64 id = universal ? 0 : ParseTitleId(titleId);
+	if (!id && !universal)
 		return result;
 	for (const auto& gp : MobileBackend::GetGraphicPacks(id))
 	{

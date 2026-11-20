@@ -716,7 +716,8 @@ namespace MobileBackend
 		for (int i = 0; i < (int)packs.size(); i++)
 		{
 			const auto& gp = packs[i];
-			if (gp->IsUniversal() || !gp->ContainsTitleId(titleId))
+			// titleId 0 = packs that apply to every game
+			if (titleId == 0 ? !gp->IsUniversal() : (gp->IsUniversal() || !gp->ContainsTitleId(titleId)))
 				continue;
 			GraphicPackInfo info;
 			info.index = i;

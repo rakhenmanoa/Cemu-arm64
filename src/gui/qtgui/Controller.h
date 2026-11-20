@@ -1,11 +1,16 @@
 #pragma once
 
+#include "MobileBackend.h"
+
 #include <QAbstractItemModel>
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
 #include <QVariant>
+
+#include <atomic>
+#include <thread>
 
 class GameListModel;
 class GameWindow;
@@ -20,6 +25,9 @@ class Controller : public QObject
 	Q_PROPERTY(bool gameRunning READ gameRunning NOTIFY gameRunningChanged)
 	Q_PROPERTY(QStringList gamePaths READ gamePaths NOTIFY gamePathsChanged)
 	Q_PROPERTY(QString version READ version CONSTANT)
+	Q_PROPERTY(bool downloadingGraphicPacks READ downloadingGraphicPacks NOTIFY graphicPackDownloadChanged)
+	Q_PROPERTY(QString graphicPackDownloadText READ graphicPackDownloadText NOTIFY graphicPackDownloadChanged)
+	Q_PROPERTY(double graphicPackDownloadProgress READ graphicPackDownloadProgress NOTIFY graphicPackDownloadChanged)
   public:
 	explicit Controller(QObject* parent = nullptr);
 	~Controller() override;
@@ -30,6 +38,9 @@ class Controller : public QObject
 	bool gameRunning() const { return m_gameRunning; }
 	QStringList gamePaths() const;
 	QString version() const;
+	bool downloadingGraphicPacks() const { return m_downloadingPacks; }
+	QString graphicPackDownloadText() const { return m_downloadText; }
+	double graphicPackDownloadProgress() const { return m_downloadProgress; }
 
 	Q_INVOKABLE void refresh();
 	Q_INVOKABLE void launch(const QString& titleId);
@@ -62,6 +73,11 @@ class Controller : public QObject
 	Q_INVOKABLE bool resetInputMapping(int player);
 	Q_INVOKABLE QVariantList pressedInputButtons(int player) const; // [{id, name, device}]
 
+	// downloads the community graphic packs (same files as the desktop interface). graphicPacks("universal") lists the
+	// packs that apply to every game
+	Q_INVOKABLE void downloadGraphicPacks();
+	Q_INVOKABLE void cancelGraphicPackDownload();
+
 	// accounts. ids are the persistent ids (0x80000001 and up)
 	// [{id, miiName, birthYear, birthMonth, birthDay, gender, email, country, valid}]
 	Q_INVOKABLE QVariantList accounts() const;
@@ -89,6 +105,7 @@ class Controller : public QObject
 	void gamePathsChanged();
 	void inputChanged();
 	void accountsChanged();
+	void graphicPackDownloadChanged();
 	void errorOccurred(const QString& message);
 
   private:
@@ -97,6 +114,7 @@ class Controller : public QObject
 	void onWindowClosed();
 	void endSession();
 	void setLaunching(bool launching);
+	void setDownloadState(bool running, MobileBackend::GraphicPackDownloadStatus status, double progress);
 
 	GameListModel* m_games = nullptr;
 	GameWindow* m_window = nullptr;
@@ -108,4 +126,9 @@ class Controller : public QObject
 	bool m_launching = false;
 	bool m_gameRunning = false;
 	bool m_sessionEnded = false;
+	bool m_downloadingPacks = false;
+	QString m_downloadText;
+	double m_downloadProgress = 0.0;
+	std::atomic_bool m_downloadCancel = false;
+	std::thread m_downloadThread;
 };
