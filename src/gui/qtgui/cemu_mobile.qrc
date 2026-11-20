@@ -8,6 +8,7 @@
         <file alias="ControllersPage.qml">qml/ControllersPage.qml</file>
         <file alias="AccountsPage.qml">qml/AccountsPage.qml</file>
         <file alias="AboutPage.qml">qml/AboutPage.qml</file>
+        <file alias="UsbDevicesPage.qml">qml/UsbDevicesPage.qml</file>
         <file alias="GraphicPacksHomePage.qml">qml/GraphicPacksHomePage.qml</file>
     </qresource>
 </RCC>

@@ -141,6 +141,37 @@ namespace MobileBackend
 	// Wii U buttons currently held on this slot, for the test screen
 	std::vector<InputPressedButton> GetPressedInputButtons(int player);
 
+	// ---- emulated USB devices: Skylanders portal, Disney Infinity base, LEGO Dimensions toypad
+	// (ported from the Android port, NativeEmulatedUSBDevices.cpp). Enable them with the settings
+	// "usb_skylander", "usb_infinity" and "usb_dimensions" ----
+	enum class FigureKind
+	{
+		kSkylander,
+		kInfinity,
+		kDimensions
+	};
+	struct FigureCatalogEntry
+	{
+		int64_t number = 0; // Skylander: id, Infinity / Dimensions: figure number
+		int variant = 0;	// Skylander only
+		std::string name;
+	};
+	struct InstalledFigure
+	{
+		std::string name;
+		std::string path;
+	};
+	constexpr int kSkylanderSlots = 16, kInfinitySlots = 9, kDimensionsSlots = 7;
+	int GetFigureSlotCount(FigureKind kind);
+	std::vector<FigureCatalogEntry> GetFigureCatalog(FigureKind kind);
+	std::vector<InstalledFigure> GetInstalledFigures(FigureKind kind);
+	// creates a new empty figure file in emulatedUSBDevices/<kind>
+	bool CreateFigure(FigureKind kind, int64_t number, int variant);
+	bool DeleteFigureFile(const std::string& path);
+	bool LoadFigure(FigureKind kind, const std::string& path, int slot);
+	void ClearFigure(FigureKind kind, int slot);
+	std::string GetFigureInSlot(FigureKind kind, int slot); // empty = nothing
+
 	// ---- graphic packs download (ported from the Android port, GraphicPacksDownloader.kt) ----
 	enum class GraphicPackDownloadStatus
 	{

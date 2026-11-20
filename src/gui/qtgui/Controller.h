@@ -78,6 +78,15 @@ class Controller : public QObject
 	Q_INVOKABLE void downloadGraphicPacks();
 	Q_INVOKABLE void cancelGraphicPackDownload();
 
+	// emulated USB devices. kind: 0 Skylanders portal, 1 Infinity base, 2 Dimensions toypad
+	Q_INVOKABLE QVariantList usbFigureSlots(int kind) const;	  // [{slot, name}] name empty = nothing loaded
+	Q_INVOKABLE QVariantList usbFigureCatalog(int kind) const;	  // [{number, variant, name}] figures that can be created
+	Q_INVOKABLE QVariantList usbInstalledFigures(int kind) const; // [{name, path}] figure files already created
+	Q_INVOKABLE bool usbCreateFigure(int kind, double number, int variant);
+	Q_INVOKABLE bool usbDeleteFigureFile(const QString& path);
+	Q_INVOKABLE bool usbLoadFigure(int kind, const QString& path, int slot);
+	Q_INVOKABLE void usbClearFigure(int kind, int slot);
+
 	// accounts. ids are the persistent ids (0x80000001 and up)
 	// [{id, miiName, birthYear, birthMonth, birthDay, gender, email, country, valid}]
 	Q_INVOKABLE QVariantList accounts() const;
@@ -105,6 +114,7 @@ class Controller : public QObject
 	void gamePathsChanged();
 	void inputChanged();
 	void accountsChanged();
+	void usbDevicesChanged();
 	void graphicPackDownloadChanged();
 	void errorOccurred(const QString& message);
 

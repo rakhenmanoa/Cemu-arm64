@@ -68,6 +68,10 @@ ApplicationWindow {
                         onTriggered: stack.push(graphicPacksHomePage)
                     }
                     MenuItem {
+                        text: qsTr("Emulated USB devices")
+                        onTriggered: stack.push(usbDevicesPage)
+                    }
+                    MenuItem {
                         text: qsTr("Accounts")
                         onTriggered: stack.push(accountsPage)
                     }
@@ -156,6 +160,11 @@ ApplicationWindow {
         GraphicPacksHomePage {
             onOpenUniversal: stack.push(graphicPacksPage, {"titleId": "universal", "gameName": qsTr("All games")})
         }
+    }
+
+    Component {
+        id: usbDevicesPage
+        UsbDevicesPage {}
     }
 
     Component {

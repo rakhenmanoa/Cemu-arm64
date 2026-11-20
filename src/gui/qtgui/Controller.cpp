@@ -225,6 +225,95 @@ void Controller::endSession()
 	::_exit(0);
 }
 
+// ---- emulated USB devices ----
+
+namespace
+{
+	MobileBackend::FigureKind ToFigureKind(int kind)
+	{
+		switch (kind)
+		{
+		case 0: return MobileBackend::FigureKind::kSkylander;
+		case 1: return MobileBackend::FigureKind::kInfinity;
+		default: return MobileBackend::FigureKind::kDimensions;
+		}
+	}
+} // namespace
+
+QVariantList Controller::usbFigureSlots(int kind) const
+{
+	QVariantList result;
+	const auto figureKind = ToFigureKind(kind);
+	for (int slot = 0; slot < MobileBackend::GetFigureSlotCount(figureKind); slot++)
+	{
+		QVariantMap m;
+		m[QStringLiteral("slot")] = slot;
+		m[QStringLiteral("name")] = QString::fromStdString(MobileBackend::GetFigureInSlot(figureKind, slot));
+		result.push_back(m);
+	}
+	return result;
+}
+
+QVariantList Controller::usbFigureCatalog(int kind) const
+{
+	QVariantList result;
+	for (const auto& f : MobileBackend::GetFigureCatalog(ToFigureKind(kind)))
+	{
+		QVariantMap m;
+		m[QStringLiteral("number")] = static_cast<double>(f.number);
+		m[QStringLiteral("variant")] = f.variant;
+		m[QStringLiteral("name")] = QString::fromStdString(f.name);
+		result.push_back(m);
+	}
+	return result;
+}
+
+QVariantList Controller::usbInstalledFigures(int kind) const
+{
+	QVariantList result;
+	for (const auto& f : MobileBackend::GetInstalledFigures(ToFigureKind(kind)))
+	{
+		QVariantMap m;
+		m[QStringLiteral("name")] = QString::fromStdString(f.name);
+		m[QStringLiteral("path")] = QString::fromStdString(f.path);
+		result.push_back(m);
+	}
+	return result;
+}
+
+bool Controller::usbCreateFigure(int kind, double number, int variant)
+{
+	const bool ok = MobileBackend::CreateFigure(ToFigureKind(kind), static_cast<int64_t>(number), variant);
+	if (!ok)
+		Q_EMIT errorOccurred(tr("Could not create the figure file"));
+	Q_EMIT usbDevicesChanged();
+	return ok;
+}
+
+bool Controller::usbDeleteFigureFile(const QString& path)
+{
+	const bool ok = MobileBackend::DeleteFigureFile(path.toStdString());
+	if (!ok)
+		Q_EMIT errorOccurred(tr("Could not delete the figure file"));
+	Q_EMIT usbDevicesChanged();
+	return ok;
+}
+
+bool Controller::usbLoadFigure(int kind, const QString& path, int slot)
+{
+	const bool ok = MobileBackend::LoadFigure(ToFigureKind(kind), path.toStdString(), slot);
+	if (!ok)
+		Q_EMIT errorOccurred(tr("Could not load the figure"));
+	Q_EMIT usbDevicesChanged();
+	return ok;
+}
+
+void Controller::usbClearFigure(int kind, int slot)
+{
+	MobileBackend::ClearFigure(ToFigureKind(kind), slot);
+	Q_EMIT usbDevicesChanged();
+}
+
 // ---- accounts ----
 
 QVariantList Controller::accounts() const
