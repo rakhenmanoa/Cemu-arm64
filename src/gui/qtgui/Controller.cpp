@@ -811,12 +811,33 @@ int Controller::removeShaderCaches(const QString& titleId)
 	return id ? MobileBackend::RemoveShaderCaches(id) : 0;
 }
 
+int Controller::gameSetting(const QString& titleId, const QString& key) const
+{
+	return MobileBackend::GetGameProfileSetting(ParseTitleId(titleId), key.toStdString());
+}
+
+void Controller::setGameSetting(const QString& titleId, const QString& key, int value)
+{
+	MobileBackend::SetGameProfileSetting(ParseTitleId(titleId), key.toStdString(), value);
+}
+
+void Controller::resetGameSettings(const QString& titleId)
+{
+	MobileBackend::ResetGameProfile(ParseTitleId(titleId));
+}
+
+int Controller::graphicPackCount() const
+{
+	return MobileBackend::GetGraphicPackCount();
+}
+
 QVariantList Controller::graphicPacks(const QString& titleId) const
 {
 	QVariantList result;
 	// "universal" = the packs that apply to every game
 	const bool universal = titleId == QLatin1String("universal");
-	const quint64 id = universal ? 0 : ParseTitleId(titleId);
+	const bool all = titleId == QLatin1String("all");
+	const quint64 id = universal ? 0 : (all ? MobileBackend::kAllGraphicPacks : ParseTitleId(titleId));
 	if (!id && !universal)
 		return result;
 	for (const auto& gp : MobileBackend::GetGraphicPacks(id))

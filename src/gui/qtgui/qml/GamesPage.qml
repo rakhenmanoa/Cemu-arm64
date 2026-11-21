@@ -10,6 +10,7 @@ Item {
     StackView.onActivated: grid.forceActiveFocus()
     signal openFolders()
     signal openGraphicPacks(string titleId, string name)
+    signal openGameSettings(string titleId, string name)
 
     // long press menu of a game
     Menu {
@@ -28,6 +29,10 @@ Item {
         MenuItem {
             text: qsTr("Start")
             onTriggered: cemu.launch(gameMenu.titleId)
+        }
+        MenuItem {
+            text: qsTr("Game settings")
+            onTriggered: page.openGameSettings(gameMenu.titleId, gameMenu.name)
         }
         MenuItem {
             text: qsTr("Graphic packs")

@@ -9,6 +9,7 @@ Item {
 
     property string title: qsTr("Graphic packs")
     signal openUniversal()
+    signal openAll()
 
     ColumnLayout {
         anchors.left: parent.left
@@ -42,6 +43,24 @@ Item {
             visible: text.length > 0
             wrapMode: Text.Wrap
             text: cemu.graphicPackDownloadText
+        }
+
+        Label {
+            id: countLabel
+            Layout.fillWidth: true
+            opacity: 0.7
+            text: qsTr("%1 graphic packs loaded").arg(cemu.graphicPackCount())
+            Connections {
+                target: cemu
+                function onGraphicPackDownloadChanged() { countLabel.text = qsTr("%1 graphic packs loaded").arg(cemu.graphicPackCount()) }
+            }
+        }
+
+        Button {
+            Layout.fillWidth: true
+            text: qsTr("All graphic packs (search)")
+            enabled: !cemu.downloadingGraphicPacks
+            onClicked: page.openAll()
         }
 
         Button {

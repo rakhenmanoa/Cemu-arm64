@@ -12,6 +12,17 @@ Item {
     property string title: qsTr("Graphic packs")
 
     property var packs: []
+    property string filter: ""
+    // "all" lists every pack and can be searched
+    readonly property bool searchable: titleId === "all"
+    readonly property var shown: {
+        var f = page.filter.trim().toLowerCase()
+        if (f.length === 0)
+            return page.packs
+        return page.packs.filter(function(p) {
+            return p.name.toLowerCase().indexOf(f) >= 0 || p.path.toLowerCase().indexOf(f) >= 0
+        })
+    }
 
     function reload() {
         var y = list.contentY
@@ -25,18 +36,32 @@ Item {
         id: list
         anchors.fill: parent
         clip: true
-        model: page.packs
+        model: page.shown
         spacing: 0
 
         ScrollBar.vertical: ScrollBar {}
 
-        header: Label {
+        header: ColumnLayout {
             width: list.width
-            padding: 16
-            wrapMode: Text.Wrap
-            font.pixelSize: 13
-            opacity: 0.7
-            text: page.gameName + "\n" + qsTr("Changes apply the next time the game is started.")
+            spacing: 0
+
+            Label {
+                Layout.fillWidth: true
+                padding: 16
+                wrapMode: Text.Wrap
+                font.pixelSize: 13
+                opacity: 0.7
+                text: page.gameName + "\n" + qsTr("Changes apply the next time the game is started.")
+            }
+            TextField {
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                Layout.bottomMargin: 8
+                visible: page.searchable
+                placeholderText: qsTr("Search a game or a pack")
+                onTextChanged: page.filter = text
+            }
         }
 
         delegate: ColumnLayout {
@@ -123,10 +148,12 @@ Item {
     Label {
         anchors.centerIn: parent
         width: Math.min(parent.width - 48, 360)
-        visible: page.packs.length === 0
+        visible: page.shown.length === 0
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
         font.pixelSize: 15
-        text: qsTr("No graphic pack found for this game.\n\nThe community graphic packs can be downloaded from the desktop interface (Options › Graphic packs › Download latest community graphic packs).")
+        text: page.packs.length > 0 ? qsTr("No graphic pack matches.")
+            : qsTr("No graphic pack found for this game.\n\n%1 graphic packs are loaded (game id %2). The community graphic packs can be downloaded from the Graphic packs menu.")
+                  .arg(cemu.graphicPackCount()).arg(page.titleId)
     }
 }

@@ -10,6 +10,7 @@ struct gameProfileIntegerOption_t
 class GameProfile
 {
 	friend class GameProfileWindow;
+	friend class MobileGameProfile; // Qt mobile UI (src/gui/qtgui/MobileGameProfile.cpp)
 
 public:
 	static const uint32 kThreadQuantumDefault = 45000;

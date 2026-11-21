@@ -267,7 +267,16 @@ namespace MobileBackend
 	GraphicPackDownloadStatus DownloadGraphicPacks(const std::function<void(GraphicPackDownloadStatus, double)>& progress,
 												   const std::atomic_bool* cancel);
 	// reloads the graphic pack list from disk. Does nothing while a title runs
+	// per game profile (same files as the desktop interface). Keys: cpu_mode (0 interpreter, 1 single core recompiler,
+	// 2 multi core recompiler, 3 auto), thread_quantum, accurate_shader_mul, precompiled_shaders (0 auto, 1 on, 2 off),
+	// load_shared_libraries
+	int GetGameProfileSetting(uint64_t titleId, const std::string& key);
+	void SetGameProfileSetting(uint64_t titleId, const std::string& key, int value);
+	void ResetGameProfile(uint64_t titleId);
+
 	void ReloadGraphicPacks();
+	int GetGraphicPackCount(); // all loaded graphic packs
+	constexpr uint64_t kAllGraphicPacks = ~0ull; // GetGraphicPacks(kAllGraphicPacks) lists every pack
 
 	// ---- accounts (stored like the desktop interface: mlc01/usr/save/system/act/<id>/account.dat) ----
 	struct AccountEntry

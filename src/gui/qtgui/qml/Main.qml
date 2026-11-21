@@ -146,6 +146,9 @@ ApplicationWindow {
             onOpenGraphicPacks: function(titleId, name) {
                 stack.push(graphicPacksPage, {"titleId": titleId, "gameName": name})
             }
+            onOpenGameSettings: function(titleId, name) {
+                stack.push(gameSettingsPage, {"titleId": titleId, "gameName": name})
+            }
         }
     }
 
@@ -170,6 +173,7 @@ ApplicationWindow {
         id: graphicPacksHomePage
         GraphicPacksHomePage {
             onOpenUniversal: stack.push(graphicPacksPage, {"titleId": "universal", "gameName": qsTr("All games")})
+            onOpenAll: stack.push(graphicPacksPage, {"titleId": "all", "gameName": qsTr("All graphic packs")})
         }
     }
 
@@ -196,6 +200,11 @@ ApplicationWindow {
     Component {
         id: settingsPage
         SettingsPage {}
+    }
+
+    Component {
+        id: gameSettingsPage
+        GameSettingsPage {}
     }
 
     Component {

@@ -108,6 +108,7 @@ namespace MobileBackend
 			fs::create_directories(root, ec);
 
 			const zip_int64_t numEntries = zip_get_num_entries(za, 0);
+			cemuLog_log(LogType::Force, "Mobile UI: extracting {} graphic pack files to {}", numEntries, _pathToUtf8(root));
 			for (zip_int64_t i = 0; i < numEntries; i++)
 			{
 				if (cancel && cancel->load())
@@ -221,5 +222,11 @@ namespace MobileBackend
 			return;
 		GraphicPack2::ClearGraphicPacks();
 		GraphicPack2::LoadAll();
+		cemuLog_log(LogType::Force, "Mobile UI: {} graphic packs loaded", GraphicPack2::GetGraphicPacks().size());
+	}
+
+	int GetGraphicPackCount()
+	{
+		return (int)GraphicPack2::GetGraphicPacks().size();
 	}
 } // namespace MobileBackend

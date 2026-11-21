@@ -759,11 +759,17 @@ namespace MobileBackend
 	{
 		std::vector<GraphicPackInfo> result;
 		const auto& packs = GraphicPack2::GetGraphicPacks();
+		// the packs are matched with the base title: an update or DLC id gives the id of its game
+		if (titleId != 0 && titleId != kAllGraphicPacks && ((titleId >> 32) == 0x0005000E || (titleId >> 32) == 0x0005000C))
+			titleId = (0x00050000ull << 32) | (titleId & 0xFFFFFFFFull);
 		for (int i = 0; i < (int)packs.size(); i++)
 		{
 			const auto& gp = packs[i];
-			// titleId 0 = packs that apply to every game
-			if (titleId == 0 ? !gp->IsUniversal() : (gp->IsUniversal() || !gp->ContainsTitleId(titleId)))
+			// titleId 0 = packs that apply to every game, kAllGraphicPacks = no filter
+			if (titleId == kAllGraphicPacks)
+			{
+			}
+			else if (titleId == 0 ? !gp->IsUniversal() : (gp->IsUniversal() || !gp->ContainsTitleId(titleId)))
 				continue;
 			GraphicPackInfo info;
 			info.index = i;
