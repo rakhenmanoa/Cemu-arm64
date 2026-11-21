@@ -4,6 +4,7 @@
 
 #include "Cafe/HW/Latte/Core/LatteTouchGamepad.h"
 #include "WindowSystem.h"
+#include "config/ActiveSettings.h"
 #include "input/ControllerFactory.h"
 #include "input/InputManager.h"
 #include "input/emulated/VPADController.h"
@@ -90,9 +91,28 @@ namespace MobileBackend
 		return true;
 	}
 
+	namespace
+	{
+		std::atomic_bool s_editOnLaunch{false};
+	}
+
+	void SetTouchGamepadEditOnLaunch(bool edit)
+	{
+		s_editOnLaunch = edit;
+	}
+
+	bool IsTouchGamepadEditOnLaunch()
+	{
+		return s_editOnLaunch;
+	}
+
 	void SyncTouchGamepad()
 	{
-		LatteTouchGamepad::SetEnabled(IsTouchGamepadEnabled(0));
+		LatteTouchGamepad::SetLayoutPath(_pathToUtf8(ActiveSettings::GetConfigPath("touch_gamepad_layout.txt")));
+		const bool enabled = IsTouchGamepadEnabled(0);
+		LatteTouchGamepad::SetEnabled(enabled);
+		// "edit the layout" was requested from the controllers page: start the next game in the editor
+		LatteTouchGamepad::SetEditing(enabled && s_editOnLaunch.exchange(false));
 	}
 
 	void SetTouchPoints(const std::vector<TouchPoint>& points)

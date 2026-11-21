@@ -326,6 +326,9 @@ namespace MobileBackend
 	bool SetTouchGamepadEnabled(int player, bool enabled, std::string& errorOut);
 	// shows the gamepad when player 1 has the keyboard device (called when a game starts)
 	void SyncTouchGamepad();
+	// the next game starts with the layout editor of the on-screen gamepad open
+	void SetTouchGamepadEditOnLaunch(bool edit);
+	bool IsTouchGamepadEditOnLaunch();
 
 	// ---- navigation of the interface with a gamepad ----
 	enum NavAction

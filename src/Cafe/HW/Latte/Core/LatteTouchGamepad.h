@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 // On-screen gamepad drawn on top of the game (used by the Qt mobile interface, ported from the on-screen
@@ -23,6 +24,11 @@ namespace LatteTouchGamepad
 	void SetEnabled(bool enabled);
 	bool IsEnabled();
 	void SetOpacity(float opacity); // 0.1 .. 1
+
+	// layout editor: controls can be moved and resized, the result is stored in the given file
+	void SetLayoutPath(const std::string& path);
+	void SetEditing(bool editing);
+	bool IsEditing();
 
 	// buttons and the virtual key that stands for each of them
 	const std::vector<KeyMapping>& GetKeyMappings();

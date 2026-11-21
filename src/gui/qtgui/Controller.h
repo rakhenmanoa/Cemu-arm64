@@ -90,6 +90,8 @@ class Controller : public QObject
 
 	// on-screen gamepad on top of the game (player 1, Wii U GamePad type only)
 	Q_INVOKABLE bool touchGamepadEnabled() const;
+	Q_INVOKABLE void editTouchGamepadLayout(); // opens the layout editor when the next game starts
+	Q_INVOKABLE bool touchGamepadEditPending() const;
 	Q_INVOKABLE bool setTouchGamepadEnabled(bool enabled); // false: error signal emitted
 
 	// title manager. type: 0 base, 1 update, 2 DLC, 3 system. format: 0 folder, 1 WUD/WUX, 2 WUA, 3 NUS, 4 WUHB

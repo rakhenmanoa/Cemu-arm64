@@ -132,6 +132,21 @@ Item {
                 opacity: 0.6
                 text: qsTr("Shows buttons and sticks over the game, usable with the touch screen. The sticks are digital (8 directions).")
             }
+            Button {
+                id: editLayoutButton
+                property bool pending: false
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                visible: touchSwitch.visible && touchSwitch.checked
+                enabled: !pending
+                text: pending ? qsTr("Layout editor opens when the next game starts") : qsTr("Edit on-screen gamepad layout")
+                onClicked: {
+                    cemu.editTouchGamepadLayout()
+                    pending = true
+                }
+                Component.onCompleted: pending = cemu.touchGamepadEditPending()
+            }
 
             SectionHeader { text: qsTr("ASSIGNED CONTROLLER") }
 

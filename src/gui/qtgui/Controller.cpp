@@ -265,6 +265,16 @@ void Controller::clearInputMapping(int player, int mappingId)
 
 // ---- on-screen gamepad ----
 
+void Controller::editTouchGamepadLayout()
+{
+	MobileBackend::SetTouchGamepadEditOnLaunch(true);
+}
+
+bool Controller::touchGamepadEditPending() const
+{
+	return MobileBackend::IsTouchGamepadEditOnLaunch();
+}
+
 bool Controller::touchGamepadEnabled() const
 {
 	return MobileBackend::IsTouchGamepadEnabled(0);

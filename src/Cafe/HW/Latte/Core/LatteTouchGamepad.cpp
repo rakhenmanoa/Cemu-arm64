@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <map>
 #include <mutex>
+#include <sstream>
 
 namespace LatteTouchGamepad
 {
@@ -23,58 +25,146 @@ namespace LatteTouchGamepad
 			kRect
 		};
 
+		// controls that are moved and resized together by the layout editor
+		enum Group : int
+		{
+			kGrpABXY,
+			kGrpDpad,
+			kGrpZL,
+			kGrpL,
+			kGrpR,
+			kGrpZR,
+			kGrpMinus,
+			kGrpHome,
+			kGrpPlus,
+			kGrpStickL,
+			kGrpStickR,
+			kGrpCount
+		};
+
 		struct Button
 		{
 			uint32 vpad;
 			const char* label;
 			Shape shape;
 			float cx, cy, r; // circle: center and radius. rect: center and half size (r = half height, width = 2.6 r)
+			int group;
 		};
 
 		struct Stick
 		{
 			float cx, cy, r;
 			uint32 up, down, left, right;
+			int group = 0;
 		};
 
 		struct Layout
 		{
 			std::vector<Button> buttons;
 			Stick left{}, right{};
+			float defCx[kGrpCount] = {}, defCy[kGrpCount] = {}; // default group centers
+			float cx[kGrpCount] = {}, cy[kGrpCount] = {};		 // current group centers
+			float extent[kGrpCount] = {};						 // current group radius (for hit tests in the editor)
+		};
+
+		// user changes of the layout. nx/ny: group center as a fraction of the window size (< 0: default position)
+		struct GroupConfig
+		{
+			float nx = -1, ny = -1, scale = 1;
 		};
 
 		using B = VPADController;
 
-		Layout MakeLayout(int w, int h)
+		Layout MakeDefaultLayout(int w, int h)
 		{
 			const float u = (float)h; // everything scales with the height of the window
 			Layout l;
 			// ABXY, Wii U layout
 			const float abxyX = w - 0.30f * u, abxyY = 0.28f * u, off = 0.15f * u, br = 0.075f * u;
-			l.buttons.push_back({B::kButtonId_A, "A", Shape::kCircle, abxyX + off, abxyY, br});
-			l.buttons.push_back({B::kButtonId_B, "B", Shape::kCircle, abxyX, abxyY + off, br});
-			l.buttons.push_back({B::kButtonId_X, "X", Shape::kCircle, abxyX, abxyY - off, br});
-			l.buttons.push_back({B::kButtonId_Y, "Y", Shape::kCircle, abxyX - off, abxyY, br});
+			l.buttons.push_back({B::kButtonId_A, "A", Shape::kCircle, abxyX + off, abxyY, br, kGrpABXY});
+			l.buttons.push_back({B::kButtonId_B, "B", Shape::kCircle, abxyX, abxyY + off, br, kGrpABXY});
+			l.buttons.push_back({B::kButtonId_X, "X", Shape::kCircle, abxyX, abxyY - off, br, kGrpABXY});
+			l.buttons.push_back({B::kButtonId_Y, "Y", Shape::kCircle, abxyX - off, abxyY, br, kGrpABXY});
 			// D-pad
 			const float dpadX = 0.30f * u, dpadY = 0.28f * u;
-			l.buttons.push_back({B::kButtonId_Up, "^", Shape::kCircle, dpadX, dpadY - off, br});
-			l.buttons.push_back({B::kButtonId_Down, "v", Shape::kCircle, dpadX, dpadY + off, br});
-			l.buttons.push_back({B::kButtonId_Left, "<", Shape::kCircle, dpadX - off, dpadY, br});
-			l.buttons.push_back({B::kButtonId_Right, ">", Shape::kCircle, dpadX + off, dpadY, br});
+			l.buttons.push_back({B::kButtonId_Up, "^", Shape::kCircle, dpadX, dpadY - off, br, kGrpDpad});
+			l.buttons.push_back({B::kButtonId_Down, "v", Shape::kCircle, dpadX, dpadY + off, br, kGrpDpad});
+			l.buttons.push_back({B::kButtonId_Left, "<", Shape::kCircle, dpadX - off, dpadY, br, kGrpDpad});
+			l.buttons.push_back({B::kButtonId_Right, ">", Shape::kCircle, dpadX + off, dpadY, br, kGrpDpad});
 			// shoulders
 			const float sr = 0.04f * u, sy = 0.05f * u;
-			l.buttons.push_back({B::kButtonId_ZL, "ZL", Shape::kRect, 0.14f * u, sy, sr});
-			l.buttons.push_back({B::kButtonId_L, "L", Shape::kRect, 0.36f * u, sy, sr});
-			l.buttons.push_back({B::kButtonId_R, "R", Shape::kRect, w - 0.36f * u, sy, sr});
-			l.buttons.push_back({B::kButtonId_ZR, "ZR", Shape::kRect, w - 0.14f * u, sy, sr});
+			l.buttons.push_back({B::kButtonId_ZL, "ZL", Shape::kRect, 0.14f * u, sy, sr, kGrpZL});
+			l.buttons.push_back({B::kButtonId_L, "L", Shape::kRect, 0.36f * u, sy, sr, kGrpL});
+			l.buttons.push_back({B::kButtonId_R, "R", Shape::kRect, w - 0.36f * u, sy, sr, kGrpR});
+			l.buttons.push_back({B::kButtonId_ZR, "ZR", Shape::kRect, w - 0.14f * u, sy, sr, kGrpZR});
 			// menu buttons
 			const float mr = 0.035f * u, my = 0.94f * u;
-			l.buttons.push_back({B::kButtonId_Minus, "-", Shape::kRect, w / 2.0f - 0.2f * u, my, mr});
-			l.buttons.push_back({B::kButtonId_Home, "H", Shape::kRect, w / 2.0f, my, mr});
-			l.buttons.push_back({B::kButtonId_Plus, "+", Shape::kRect, w / 2.0f + 0.2f * u, my, mr});
+			l.buttons.push_back({B::kButtonId_Minus, "-", Shape::kRect, w / 2.0f - 0.2f * u, my, mr, kGrpMinus});
+			l.buttons.push_back({B::kButtonId_Home, "H", Shape::kRect, w / 2.0f, my, mr, kGrpHome});
+			l.buttons.push_back({B::kButtonId_Plus, "+", Shape::kRect, w / 2.0f + 0.2f * u, my, mr, kGrpPlus});
 			// sticks
-			l.left = {0.30f * u, 0.74f * u, 0.15f * u, B::kButtonId_StickL_Up, B::kButtonId_StickL_Down, B::kButtonId_StickL_Left, B::kButtonId_StickL_Right};
-			l.right = {w - 0.30f * u, 0.74f * u, 0.15f * u, B::kButtonId_StickR_Up, B::kButtonId_StickR_Down, B::kButtonId_StickR_Left, B::kButtonId_StickR_Right};
+			l.left = {0.30f * u, 0.74f * u, 0.15f * u, B::kButtonId_StickL_Up, B::kButtonId_StickL_Down, B::kButtonId_StickL_Left, B::kButtonId_StickL_Right, kGrpStickL};
+			l.right = {w - 0.30f * u, 0.74f * u, 0.15f * u, B::kButtonId_StickR_Up, B::kButtonId_StickR_Down, B::kButtonId_StickR_Left, B::kButtonId_StickR_Right, kGrpStickR};
+			// default centers and sizes of the groups
+			for (int g = 0; g < kGrpCount; g++)
+			{
+				float sx = 0, sy2 = 0;
+				int n = 0;
+				if (g == kGrpStickL || g == kGrpStickR)
+				{
+					const Stick& st = g == kGrpStickL ? l.left : l.right;
+					l.defCx[g] = st.cx;
+					l.defCy[g] = st.cy;
+					continue;
+				}
+				for (const auto& b : l.buttons)
+					if (b.group == g)
+					{
+						sx += b.cx;
+						sy2 += b.cy;
+						n++;
+					}
+				l.defCx[g] = n ? sx / n : 0;
+				l.defCy[g] = n ? sy2 / n : 0;
+			}
+			return l;
+		}
+
+		float GroupMemberExtent(const Button& b)
+		{
+			return b.shape == Shape::kCircle ? b.r : b.r * 1.3f;
+		}
+
+		GroupConfig s_groups[kGrpCount];
+
+		// default layout + the changes made with the editor
+		Layout MakeLayout(int w, int h)
+		{
+			Layout l = MakeDefaultLayout(w, h);
+			for (int g = 0; g < kGrpCount; g++)
+			{
+				const GroupConfig& cfg = s_groups[g];
+				l.cx[g] = cfg.nx >= 0 ? cfg.nx * w : l.defCx[g];
+				l.cy[g] = cfg.ny >= 0 ? cfg.ny * h : l.defCy[g];
+				l.extent[g] = 0;
+			}
+			for (auto& b : l.buttons)
+			{
+				const GroupConfig& cfg = s_groups[b.group];
+				const float dx = b.cx - l.defCx[b.group], dy = b.cy - l.defCy[b.group];
+				b.cx = l.cx[b.group] + dx * cfg.scale;
+				b.cy = l.cy[b.group] + dy * cfg.scale;
+				b.r *= cfg.scale;
+				l.extent[b.group] = std::max(l.extent[b.group], std::hypot(dx * cfg.scale, dy * cfg.scale) + GroupMemberExtent(b));
+			}
+			for (Stick* st : {&l.left, &l.right})
+			{
+				const GroupConfig& cfg = s_groups[st->group];
+				st->cx = l.cx[st->group];
+				st->cy = l.cy[st->group];
+				st->r *= cfg.scale;
+				l.extent[st->group] = st->r;
+			}
 			return l;
 		}
 
@@ -104,6 +194,113 @@ namespace LatteTouchGamepad
 		float s_leftOffset[2] = {0, 0}, s_rightOffset[2] = {0, 0}; // stick knob offsets in pixels
 		int s_layoutW = 0, s_layoutH = 0;
 		Layout s_layout;
+
+		// layout editor
+		bool s_editing = false;
+		int s_selected = -1;
+		std::string s_layoutPath;
+		struct Drag
+		{
+			int group; // >= 0: group being moved, < 0: toolbar button (-1 - index)
+			float offX, offY;
+		};
+		std::map<int, Drag> s_drags;
+		enum ToolbarItem : int
+		{
+			kToolSmaller,
+			kToolBigger,
+			kToolReset,
+			kToolDone,
+			kToolCount
+		};
+		const char* const kToolLabels[kToolCount] = {"-", "+", "Reset", "Done"};
+
+		void SaveLayoutFile()
+		{
+			if (s_layoutPath.empty())
+				return;
+			std::ofstream f(s_layoutPath, std::ios::trunc);
+			if (!f)
+				return;
+			for (int g = 0; g < kGrpCount; g++)
+				f << g << ' ' << s_groups[g].nx << ' ' << s_groups[g].ny << ' ' << s_groups[g].scale << '\n';
+		}
+
+		void LoadLayoutFile()
+		{
+			for (auto& g : s_groups)
+				g = GroupConfig{};
+			std::ifstream f(s_layoutPath);
+			std::string line;
+			while (f && std::getline(f, line))
+			{
+				std::istringstream in(line);
+				int g;
+				float nx, ny, scale;
+				if (!(in >> g >> nx >> ny >> scale) || g < 0 || g >= kGrpCount)
+					continue;
+				s_groups[g].nx = nx;
+				s_groups[g].ny = ny;
+				s_groups[g].scale = std::clamp(scale, 0.5f, 2.0f);
+			}
+			s_layoutW = 0;
+		}
+
+		void EnsureLayout(int width, int height)
+		{
+			if (width != s_layoutW || height != s_layoutH)
+			{
+				s_layout = MakeLayout(width, height);
+				s_layoutW = width;
+				s_layoutH = height;
+			}
+		}
+
+		struct Rect
+		{
+			float x0, y0, x1, y1;
+		};
+
+		Rect ToolbarRect(int index, int w, int h)
+		{
+			const float u = (float)h;
+			const float widths[kToolCount] = {0.12f * u, 0.12f * u, 0.22f * u, 0.22f * u};
+			const float gap = 0.02f * u, bh = 0.09f * u;
+			float total = gap * (kToolCount - 1);
+			for (float x : widths)
+				total += x;
+			float x = w / 2.0f - total / 2.0f;
+			for (int i = 0; i < index; i++)
+				x += widths[i] + gap;
+			return {x, 0.5f * u - bh / 2, x + widths[index], 0.5f * u + bh / 2};
+		}
+
+		int ToolbarHit(float x, float y, int w, int h)
+		{
+			for (int i = 0; i < kToolCount; i++)
+			{
+				const Rect r = ToolbarRect(i, w, h);
+				if (x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1)
+					return i;
+			}
+			return -1;
+		}
+
+		int GroupHit(const Layout& l, float x, float y)
+		{
+			int best = -1;
+			float bestDist = 1e9f;
+			for (int g = 0; g < kGrpCount; g++)
+			{
+				const float d = std::hypot(x - l.cx[g], y - l.cy[g]);
+				if (d <= l.extent[g] * 1.15f && d < bestDist)
+				{
+					best = g;
+					bestDist = d;
+				}
+			}
+			return best;
+		}
 
 		void SetPressed(uint32 vpad, bool pressed)
 		{
@@ -153,6 +350,32 @@ namespace LatteTouchGamepad
 			SetPressed(s.right, false);
 		}
 	} // namespace
+
+	void SetLayoutPath(const std::string& path)
+	{
+		std::lock_guard lock(s_mutex);
+		s_layoutPath = path;
+		LoadLayoutFile();
+	}
+
+	void SetEditing(bool editing)
+	{
+		std::lock_guard lock(s_mutex);
+		if (s_editing == editing)
+			return;
+		ReleaseAll();
+		s_editing = editing;
+		s_selected = -1;
+		s_drags.clear();
+		if (!editing)
+			SaveLayoutFile();
+	}
+
+	bool IsEditing()
+	{
+		std::lock_guard lock(s_mutex);
+		return s_editing;
+	}
 
 	void SetEnabled(bool enabled)
 	{
@@ -207,11 +430,83 @@ namespace LatteTouchGamepad
 			}
 			return;
 		}
-		if (width != s_layoutW || height != s_layoutH)
+		EnsureLayout(width, height);
+		if (s_editing)
 		{
-			s_layout = MakeLayout(width, height);
-			s_layoutW = width;
-			s_layoutH = height;
+			std::map<int, bool> seenEdit;
+			for (const auto& p : points)
+			{
+				if (!p.down)
+					continue;
+				seenEdit[p.id] = true;
+				auto it = s_drags.find(p.id);
+				if (it == s_drags.end())
+				{
+					// a new finger: toolbar button, control to move, or nothing
+					Drag drag{-100, 0, 0};
+					const int tool = ToolbarHit(p.x, p.y, width, height);
+					if (tool >= 0)
+					{
+						drag.group = -1 - tool;
+						GroupConfig* sel = s_selected >= 0 ? &s_groups[s_selected] : nullptr;
+						if (tool == kToolSmaller && sel)
+							sel->scale = std::clamp(sel->scale / 1.1f, 0.5f, 2.0f);
+						else if (tool == kToolBigger && sel)
+							sel->scale = std::clamp(sel->scale * 1.1f, 0.5f, 2.0f);
+						else if (tool == kToolReset)
+						{
+							for (auto& g : s_groups)
+								g = GroupConfig{};
+							SaveLayoutFile();
+						}
+						else if (tool == kToolDone)
+						{
+							s_layoutW = 0;
+							s_editing = false;
+							s_selected = -1;
+							s_drags.clear();
+							SaveLayoutFile();
+							return;
+						}
+						s_layoutW = 0;
+						EnsureLayout(width, height);
+					}
+					else
+					{
+						const int g = GroupHit(s_layout, p.x, p.y);
+						if (g >= 0)
+						{
+							s_selected = g;
+							drag.group = g;
+							drag.offX = p.x - s_layout.cx[g];
+							drag.offY = p.y - s_layout.cy[g];
+						}
+					}
+					it = s_drags.emplace(p.id, drag).first;
+				}
+				const Drag& drag = it->second;
+				if (drag.group >= 0)
+				{
+					const float cx = std::clamp(p.x - drag.offX, 0.0f, (float)width);
+					const float cy = std::clamp(p.y - drag.offY, 0.0f, (float)height);
+					s_groups[drag.group].nx = cx / width;
+					s_groups[drag.group].ny = cy / height;
+					s_layoutW = 0;
+					EnsureLayout(width, height);
+				}
+			}
+			for (auto it = s_drags.begin(); it != s_drags.end();)
+			{
+				if (!seenEdit.count(it->first))
+				{
+					if (it->second.group >= 0)
+						SaveLayoutFile(); // a control was moved
+					it = s_drags.erase(it);
+				}
+				else
+					++it;
+			}
+			return;
 		}
 		const Layout& layout = s_layout;
 
@@ -289,12 +584,7 @@ namespace LatteTouchGamepad
 		std::lock_guard lock(s_mutex);
 		if (!s_enabled || width <= 0 || height <= 0)
 			return;
-		if (width != s_layoutW || height != s_layoutH)
-		{
-			s_layout = MakeLayout(width, height);
-			s_layoutW = width;
-			s_layoutH = height;
-		}
+		EnsureLayout(width, height);
 		const Layout& layout = s_layout;
 		ImDrawList* draw = ImGui::GetForegroundDrawList();
 		const int alpha = (int)(255.0f * s_opacity);
@@ -337,5 +627,21 @@ namespace LatteTouchGamepad
 		};
 		drawStick(layout.left, s_leftOffset);
 		drawStick(layout.right, s_rightOffset);
+
+		if (s_editing)
+		{
+			const ImU32 selectedColor = IM_COL32(255, 210, 0, 255);
+			if (s_selected >= 0)
+				draw->AddCircle(ImVec2(layout.cx[s_selected], layout.cy[s_selected]), layout.extent[s_selected] * 1.15f, selectedColor, 64,
+								thickness * 1.5f);
+			for (int i = 0; i < kToolCount; i++)
+			{
+				const Rect r = ToolbarRect(i, width, height);
+				draw->AddRectFilled(ImVec2(r.x0, r.y0), ImVec2(r.x1, r.y1), IM_COL32(0, 0, 0, 200), 0.02f * height);
+				draw->AddRect(ImVec2(r.x0, r.y0), ImVec2(r.x1, r.y1), selectedColor, 0.02f * height, 0, thickness);
+				drawLabel(kToolLabels[i], (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2);
+			}
+			drawLabel("Drag a control to move it, tap it then - / + to resize", width / 2.0f, 0.38f * height);
+		}
 	}
 } // namespace LatteTouchGamepad
