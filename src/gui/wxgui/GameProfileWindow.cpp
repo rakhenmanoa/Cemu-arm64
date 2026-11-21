@@ -333,8 +333,12 @@ void GameProfileWindow::ApplyProfile()
 
 void GameProfileWindow::SaveProfile()
 {
-	// update game profile struct
+	// update game profile struct (the options of the mobile interface are kept)
+	const auto runAheadOfGpu = m_game_profile.m_runAheadOfGpu;
+	const auto frameLimit30 = m_game_profile.m_frameLimit30;
 	m_game_profile.Reset();
+	m_game_profile.m_runAheadOfGpu = runAheadOfGpu;
+	m_game_profile.m_frameLimit30 = frameLimit30;
 	// general
 	m_game_profile.m_loadSharedLibraries = m_load_libs->GetValue();
 	m_game_profile.m_startWithPadView = m_start_with_padview->GetValue();

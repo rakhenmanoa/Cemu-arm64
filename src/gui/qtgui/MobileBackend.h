@@ -269,7 +269,8 @@ namespace MobileBackend
 	// reloads the graphic pack list from disk. Does nothing while a title runs
 	// per game profile (same files as the desktop interface). Keys: cpu_mode (0 interpreter, 1 single core recompiler,
 	// 2 multi core recompiler, 3 auto), thread_quantum, accurate_shader_mul, precompiled_shaders (0 auto, 1 on, 2 off),
-	// load_shared_libraries
+	// load_shared_libraries, run_ahead_of_gpu and frame_limit_30 (0 global setting, 1 off, 2 on)
+	// (load_shared_libraries is 0/1)
 	int GetGameProfileSetting(uint64_t titleId, const std::string& key);
 	void SetGameProfileSetting(uint64_t titleId, const std::string& key, int value);
 	void ResetGameProfile(uint64_t titleId);

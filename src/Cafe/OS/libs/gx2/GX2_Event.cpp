@@ -11,6 +11,7 @@
 #include "util/helpers/ConcurrentQueue.h"
 #include "Cafe/HW/Latte/Core/GuestWaitProfiler.h"
 #include "config/CemuConfig.h"
+#include "Cafe/GameProfile/GameProfile.h"
 #include <mutex>
 #include <unordered_map>
 
@@ -215,7 +216,7 @@ namespace GX2
 		__OSLockScheduler();
 		g_vsyncThreadQueue.GetPtr()->queueAndWait(currentThread);
 		__OSUnlockScheduler();
-		if (GetConfig().frame_limit_30.GetValue())
+		if (g_current_game_profile->GetFrameLimit30().value_or(GetConfig().frame_limit_30.GetValue()))
 		{
 			uint64 now = PPCTimer_getRawTsc();
 			uint64 last;
@@ -251,7 +252,7 @@ namespace GX2
 	static bool DrawDoneLagEnabled()
 	{
 		static const bool s_env = getenv("CEMU_DRAWDONE_LAG") != nullptr;
-		return s_env || GetConfig().gx2_drawdone_lag.GetValue();
+		return s_env || g_current_game_profile->GetRunAheadOfGpu().value_or(GetConfig().gx2_drawdone_lag.GetValue());
 	}
 	static std::atomic<uint64> s_prevDrawDoneTimestamp{0};
 
@@ -317,6 +318,12 @@ namespace GX2
 
     void GX2EventResetToDefaultState()
     {
+        // state of the 30 FPS limit and of "run ahead of the GPU" belongs to one game run
+        s_prevDrawDoneTimestamp = 0;
+        {
+            std::lock_guard lock(s_vsyncLimitMutex);
+            s_vsyncLimitLastReturn.clear();
+        }
         s_eventCbQueue.clear();
         s_callbackThreadLaunched = false;
         for(auto& it : s_eventCallback)

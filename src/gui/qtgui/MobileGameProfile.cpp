@@ -8,6 +8,21 @@
 // friend of GameProfile: the profile members are private
 class MobileGameProfile
 {
+  private:
+	// 0: not set (global setting), 1: off, 2: on
+	static int TriState(const std::optional<bool>& o)
+	{
+		return o.has_value() ? (*o ? 2 : 1) : 0;
+	}
+
+	static void SetTriState(std::optional<bool>& o, int value)
+	{
+		if (value == 0)
+			o.reset();
+		else
+			o = value == 2;
+	}
+
   public:
 	static void Load(GameProfile& profile, uint64_t titleId)
 	{
@@ -40,6 +55,10 @@ class MobileGameProfile
 			return (int)p.m_precompiledShaders.value_or(PrecompiledShaderOption::Auto);
 		if (key == "load_shared_libraries")
 			return p.m_loadSharedLibraries.value_or(true) ? 1 : 0;
+		if (key == "run_ahead_of_gpu")
+			return TriState(p.m_runAheadOfGpu);
+		if (key == "frame_limit_30")
+			return TriState(p.m_frameLimit30);
 		return 0;
 	}
 
@@ -58,6 +77,10 @@ class MobileGameProfile
 			p.m_precompiledShaders = (PrecompiledShaderOption)std::clamp(value, 0, 2);
 		else if (key == "load_shared_libraries")
 			p.m_loadSharedLibraries = value != 0;
+		else if (key == "run_ahead_of_gpu")
+			SetTriState(p.m_runAheadOfGpu, value);
+		else if (key == "frame_limit_30")
+			SetTriState(p.m_frameLimit30, value);
 		else
 			return false;
 		return true;

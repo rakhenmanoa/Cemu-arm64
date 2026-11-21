@@ -20,6 +20,8 @@ Item {
         shaderMul.currentIndex = cemu.gameSetting(page.titleId, "accurate_shader_mul")
         precompiled.currentIndex = cemu.gameSetting(page.titleId, "precompiled_shaders")
         sharedLibs.checked = cemu.gameSetting(page.titleId, "load_shared_libraries") !== 0
+        runAhead.currentIndex = cemu.gameSetting(page.titleId, "run_ahead_of_gpu")
+        limit30.currentIndex = cemu.gameSetting(page.titleId, "frame_limit_30")
     }
 
     Component.onCompleted: reloadAll()
@@ -102,6 +104,28 @@ Item {
                 model: [qsTr("Auto"), qsTr("Enabled"), qsTr("Disabled")]
                 onActivated: function(i) { cemu.setGameSetting(page.titleId, "precompiled_shaders", i) }
             }
+
+            RowLabel { text: qsTr("Run ahead of the GPU") }
+            ComboBox {
+                id: runAhead
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                model: [qsTr("Default (global setting)"), qsTr("Off"), qsTr("On")]
+                onActivated: function(i) { cemu.setGameSetting(page.titleId, "run_ahead_of_gpu", i) }
+            }
+            RowHint { text: qsTr("Much faster on heavy scenes (the game no longer waits for the GPU at every frame); may cause rare glitches.") }
+
+            RowLabel { text: qsTr("Limit to 30 FPS") }
+            ComboBox {
+                id: limit30
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                model: [qsTr("Default (global setting)"), qsTr("Off"), qsTr("On")]
+                onActivated: function(i) { cemu.setGameSetting(page.titleId, "frame_limit_30", i) }
+            }
+            RowHint { text: qsTr("Keeps menus and light scenes at 30 FPS so the game speed does not change.") }
 
             SwitchDelegate {
                 id: sharedLibs
