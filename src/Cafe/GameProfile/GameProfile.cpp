@@ -226,6 +226,8 @@ bool GameProfile::Load(uint64_t title_id)
 				m_graphics_api = (GraphicAPI)graphicsApi.value;
 
 			gameProfile_loadEnumOption(iniParser, "accurateShaderMul", m_accurateShaderMul);
+			gameProfile_loadBooleanOption2(iniParser, "runAheadOfGpu", m_runAheadOfGpu);
+			gameProfile_loadBooleanOption2(iniParser, "frameLimit30", m_frameLimit30);
 #ifdef ENABLE_METAL
 			gameProfile_loadBooleanOption2(iniParser, "shaderFastMath", m_shaderFastMath);
 			gameProfile_loadEnumOption(iniParser, "metalBufferCacheMode2", m_metalBufferCacheMode);
@@ -311,6 +313,8 @@ void GameProfile::Save(uint64_t title_id)
 
 	fs->writeLine("[Graphics]");
 	WRITE_ENTRY(accurateShaderMul);
+	WRITE_OPTIONAL_ENTRY(runAheadOfGpu);
+	WRITE_OPTIONAL_ENTRY(frameLimit30);
 #ifdef ENABLE_METAL
 	WRITE_ENTRY(shaderFastMath);
 	WRITE_ENTRY_NUMBERED(metalBufferCacheMode, 2);
@@ -346,6 +350,8 @@ void GameProfile::ResetOptional()
 
 	// graphic settings
 	m_accurateShaderMul = AccurateShaderMulOption::True;
+	m_runAheadOfGpu.reset();
+	m_frameLimit30.reset();
 #ifdef ENABLE_METAL
 	m_shaderFastMath = true;
 	m_metalBufferCacheMode = MetalBufferCacheMode::Auto;
@@ -371,6 +377,8 @@ void GameProfile::Reset()
 
 	// graphic settings
 	m_accurateShaderMul = AccurateShaderMulOption::True;
+	m_runAheadOfGpu.reset();
+	m_frameLimit30.reset();
 #ifdef ENABLE_METAL
 	m_shaderFastMath = true;
 	m_metalBufferCacheMode = MetalBufferCacheMode::Auto;

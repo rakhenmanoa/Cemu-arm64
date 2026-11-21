@@ -487,6 +487,7 @@ struct CemuConfig
 	ConfigValue<sint32> upscale_filter{kBicubicFilter};
 	ConfigValue<sint32> downscale_filter{kLinearFilter};
 	ConfigValue<sint32> fullscreen_scaling{kKeepAspectRatio};
+	ConfigValue<sint32> game_rotation{0}; // mobile UI: 0 = none, 1 = game image rotated 90 degrees clockwise, 2 = 270
 
 	// audio
 	sint32 audio_api = 0;

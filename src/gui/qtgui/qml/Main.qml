@@ -64,8 +64,28 @@ ApplicationWindow {
                         onTriggered: stack.push(controllersPage)
                     }
                     MenuItem {
+                        text: qsTr("Title manager")
+                        onTriggered: stack.push(titleManagerPage)
+                    }
+                    MenuItem {
+                        text: qsTr("Graphic packs")
+                        onTriggered: stack.push(graphicPacksHomePage)
+                    }
+                    MenuItem {
+                        text: qsTr("Emulated USB devices")
+                        onTriggered: stack.push(usbDevicesPage)
+                    }
+                    MenuItem {
+                        text: qsTr("Accounts")
+                        onTriggered: stack.push(accountsPage)
+                    }
+                    MenuItem {
                         text: qsTr("Settings")
                         onTriggered: stack.push(settingsPage)
+                    }
+                    MenuItem {
+                        text: qsTr("About Cemu")
+                        onTriggered: stack.push(aboutPage)
                     }
                     MenuItem {
                         text: qsTr("Quit")
@@ -126,6 +146,9 @@ ApplicationWindow {
             onOpenGraphicPacks: function(titleId, name) {
                 stack.push(graphicPacksPage, {"titleId": titleId, "gameName": name})
             }
+            onOpenGameSettings: function(titleId, name) {
+                stack.push(gameSettingsPage, {"titleId": titleId, "gameName": name})
+            }
         }
     }
 
@@ -136,12 +159,52 @@ ApplicationWindow {
 
     Component {
         id: controllersPage
-        ControllersPage {}
+        ControllersPage {
+            onOpenMapping: stack.push(inputMappingPage)
+        }
+    }
+
+    Component {
+        id: titleManagerPage
+        TitleManagerPage {}
+    }
+
+    Component {
+        id: graphicPacksHomePage
+        GraphicPacksHomePage {
+            onOpenUniversal: stack.push(graphicPacksPage, {"titleId": "universal", "gameName": qsTr("All games")})
+            onOpenAll: stack.push(graphicPacksPage, {"titleId": "all", "gameName": qsTr("All graphic packs")})
+        }
+    }
+
+    Component {
+        id: usbDevicesPage
+        UsbDevicesPage {}
+    }
+
+    Component {
+        id: accountsPage
+        AccountsPage {}
+    }
+
+    Component {
+        id: aboutPage
+        AboutPage {}
+    }
+
+    Component {
+        id: inputMappingPage
+        InputMappingPage {}
     }
 
     Component {
         id: settingsPage
         SettingsPage {}
+    }
+
+    Component {
+        id: gameSettingsPage
+        GameSettingsPage {}
     }
 
     Component {

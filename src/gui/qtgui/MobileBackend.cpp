@@ -313,14 +313,50 @@ namespace MobileBackend
 		NotifyGameListChanged();
 	}
 
+	namespace
+	{
+		std::atomic_int s_rawPhysWidth{0}, s_rawPhysHeight{0};
+	}
+
 	void SetWindowSize(int width, int height, int physWidth, int physHeight, double scale)
 	{
 		auto& info = WindowSystem::GetWindowInfo();
+		// optional rotation of the game image (the swapchain keeps the real size, the emulator sees the rotated one)
+		const int setting = GetConfig().game_rotation.GetValue();
+		const int rotation = setting == 1 ? 90 : (setting == 2 ? 270 : 0);
+		s_rawPhysWidth = physWidth;
+		s_rawPhysHeight = physHeight;
+		if (rotation != 0)
+		{
+			std::swap(width, height);
+			std::swap(physWidth, physHeight);
+		}
+		info.rotation = rotation;
 		info.width = width;
 		info.height = height;
 		info.phys_width = physWidth;
 		info.phys_height = physHeight;
 		info.dpi_scale = scale;
+	}
+
+	void PhysicalToLogical(int& x, int& y)
+	{
+		const int rotation = WindowSystem::GetWindowInfo().rotation;
+		const int rawW = s_rawPhysWidth, rawH = s_rawPhysHeight;
+		if (rotation == 90)
+		{
+			const int lx = y;
+			const int ly = rawW - x;
+			x = lx;
+			y = ly;
+		}
+		else if (rotation == 270)
+		{
+			const int lx = rawH - y;
+			const int ly = x;
+			x = lx;
+			y = ly;
+		}
 	}
 
 	bool LaunchGame(uint64_t titleId, const NativeWindow& window, std::string& errorOut)
@@ -336,6 +372,7 @@ namespace MobileBackend
 		}
 		// connect the controllers of the saved profiles now: SDL may have announced them before the profiles were loaded
 		InputManager::instance().on_device_changed();
+		SyncTouchGamepad();
 		if (!g_vulkan_available)
 		{
 			errorOut = "Vulkan is not available on this device.";
@@ -468,6 +505,7 @@ namespace MobileBackend
 
 	void SetMouse(int physX, int physY, bool leftDown, bool rightDown)
 	{
+		PhysicalToLogical(physX, physY);
 		auto& instance = InputManager::instance();
 		std::scoped_lock lock(instance.m_main_mouse.m_mutex);
 		instance.m_main_mouse.position = {physX, physY};
@@ -529,6 +567,8 @@ namespace MobileBackend
 				                         [](CemuConfig& c, int v) { c.upscale_filter = std::clamp(v, 0, 3); }}},
 				{"downscale_filter",    {[](CemuConfig& c) { return (int)c.downscale_filter.GetValue(); },
 				                         [](CemuConfig& c, int v) { c.downscale_filter = std::clamp(v, 0, 3); }}},
+				{"game_rotation",       {[](CemuConfig& c) { return (int)c.game_rotation.GetValue(); },
+				                         [](CemuConfig& c, int v) { c.game_rotation = std::clamp(v, 0, 2); }}},
 				{"fullscreen_scaling",  {[](CemuConfig& c) { return (int)c.fullscreen_scaling.GetValue(); },
 				                         [](CemuConfig& c, int v) { c.fullscreen_scaling = std::clamp(v, 0, 1); }}},
 				// audio
@@ -551,6 +591,22 @@ namespace MobileBackend
 				                         [](CemuConfig& c, int v) { c.overlay.ram_usage = v != 0; }}},
 				{"overlay_vram",        {[](CemuConfig& c) { return (int)c.overlay.vram_usage; },
 				                         [](CemuConfig& c, int v) { c.overlay.vram_usage = v != 0; }}},
+				{"overlay_drawcalls",   {[](CemuConfig& c) { return (int)c.overlay.drawcalls; },
+				                         [](CemuConfig& c, int v) { c.overlay.drawcalls = v != 0; }}},
+				{"overlay_cpu_per_core", {[](CemuConfig& c) { return (int)c.overlay.cpu_per_core_usage; },
+				                         [](CemuConfig& c, int v) { c.overlay.cpu_per_core_usage = v != 0; }}},
+				{"overlay_debug",       {[](CemuConfig& c) { return (int)c.overlay.debug; },
+				                         [](CemuConfig& c, int v) { c.overlay.debug = v != 0; }}},
+				{"notification_controller_profiles", {[](CemuConfig& c) { return (int)c.notification.controller_profiles; },
+				                         [](CemuConfig& c, int v) { c.notification.controller_profiles = v != 0; }}},
+				{"notification_friends", {[](CemuConfig& c) { return (int)c.notification.friends; },
+				                         [](CemuConfig& c, int v) { c.notification.friends = v != 0; }}},
+				{"usb_skylander",       {[](CemuConfig& c) { return (int)c.emulated_usb_devices.emulate_skylander_portal.GetValue(); },
+				                         [](CemuConfig& c, int v) { c.emulated_usb_devices.emulate_skylander_portal = v != 0; }}},
+				{"usb_infinity",        {[](CemuConfig& c) { return (int)c.emulated_usb_devices.emulate_infinity_base.GetValue(); },
+				                         [](CemuConfig& c, int v) { c.emulated_usb_devices.emulate_infinity_base = v != 0; }}},
+				{"usb_dimensions",      {[](CemuConfig& c) { return (int)c.emulated_usb_devices.emulate_dimensions_toypad.GetValue(); },
+				                         [](CemuConfig& c, int v) { c.emulated_usb_devices.emulate_dimensions_toypad = v != 0; }}},
 				{"notification_position", {[](CemuConfig& c) { return (int)c.notification.position; },
 				                         [](CemuConfig& c, int v) { c.notification.position = (ScreenPosition)std::clamp(v, 0, 6); }}},
 				{"notification_scale",  {[](CemuConfig& c) { return (int)c.notification.text_scale; },
@@ -703,10 +759,17 @@ namespace MobileBackend
 	{
 		std::vector<GraphicPackInfo> result;
 		const auto& packs = GraphicPack2::GetGraphicPacks();
+		// the packs are matched with the base title: an update or DLC id gives the id of its game
+		if (titleId != 0 && titleId != kAllGraphicPacks && ((titleId >> 32) == 0x0005000E || (titleId >> 32) == 0x0005000C))
+			titleId = (0x00050000ull << 32) | (titleId & 0xFFFFFFFFull);
 		for (int i = 0; i < (int)packs.size(); i++)
 		{
 			const auto& gp = packs[i];
-			if (gp->IsUniversal() || !gp->ContainsTitleId(titleId))
+			// titleId 0 = packs that apply to every game, kAllGraphicPacks = no filter
+			if (titleId == kAllGraphicPacks)
+			{
+			}
+			else if (titleId == 0 ? !gp->IsUniversal() : (gp->IsUniversal() || !gp->ContainsTitleId(titleId)))
 				continue;
 			GraphicPackInfo info;
 			info.index = i;

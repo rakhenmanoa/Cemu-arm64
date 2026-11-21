@@ -6,15 +6,25 @@ It lives next to the wxWidgets interface and is started with `Cemu --mobile-ui`
 
 What it does today:
 
-- game list (grid with icons), refresh, launch
-- game folder management
-- controllers: pick the SDL controller for player 1, default mapping, live button test
+- game list (grid with icons), refresh, launch, game folder management
+- controllers: pick the SDL controller for player 1, default mapping, button by button mapping, live button test
+- on-screen gamepad over the game (multi-touch, drawn by the core overlay, press virtual keys of the Keyboard device),
+  with a layout editor (drag, resize, reset) opened from the controllers page
+- game rotation: the game image can be rotated 90 degrees (landscape on a portrait screen) inside the app, without
+  rotating the Plasma output. The menus stay as they are
+- accounts: list, active account, create / edit / delete, network service, online files check
+- title manager: list, install from a folder, delete, convert to .wua
+- emulated USB devices: Skylanders portal, Disney Infinity base, LEGO Dimensions toypad
+- graphic packs: download / update the community packs, packs of a game, packs for all games, search in all packs
+- per game settings (game profile): CPU mode, thread quantum, shader multiplication, precompiled shaders, shared
+  libraries, run ahead of the GPU, limit to 30 FPS
+- settings, About
 - navigation with a gamepad (D-pad / left stick, A = select, B = back, Y = game menu)
 - full screen Vulkan render window with keyboard, mouse and touch forwarding
 
-Everything else (custom input mapping, graphics/audio settings, graphic packs, title manager,
-debugger, ...) is still only available in the desktop interface; both share the same
-configuration files.
+Not ported from the Android port: custom GPU drivers (Mesa is used), hotkeys, saves manager. The sticks of the
+on-screen gamepad are digital (8 directions). These stay in the desktop interface; both share the same configuration
+files.
 
 ## Layout
 
@@ -23,6 +33,7 @@ configuration files.
 | `MobileBackend.*` | Bridge to the emulator core. Standard C++ types only, no Qt. |
 | `QtMobileUI.*` | Entry point, creates the Qt application and the QML engine. |
 | `Controller.*` | Object exposed to QML as `cemu`. |
+| `MobileAccounts.cpp`, `MobileGraphicPackDownload.cpp`, `MobileUSBDevices.cpp`, `MobileTitles.cpp`, `MobileTouchGamepad.cpp`, `MobileInputMapping.cpp`, `MobileGameProfile.cpp` | Parts of the bridge, one per feature. |
 | `GameListModel.*` | List model behind the game grid. |
 | `GameWindow.*` | Native window the emulator renders into. |
 | `qml/` | The pages. |
@@ -35,9 +46,16 @@ and starting another one in the same process is not reliable in the core.
 
 ## Menus available in the mobile interface
 
-- **⋮ › Settings**: console language, screen saver, intro sound, VSync, asynchronous shader compilation,
-  scaling and filters, audio output device / volume / channels / latency, overlay and notifications.
-- **Long press on a game**: start, graphic packs of that game (enable + presets), remove shader caches.
+- **⋮ › Settings**: console language, screen saver, intro sound, VSync, run ahead of the GPU, 30 FPS limit,
+  game rotation, scaling and filters, audio output device / volume / channels / latency, overlay and notifications.
+- **⋮ › Accounts / Title manager / Graphic packs / Emulated USB devices / About**.
+- **Long press on a game**: start, game settings, graphic packs of that game (enable + presets), remove shader caches.
+
+Game rotation and the on-screen gamepad layout are stored in `settings.xml` (`GameRotation`) and
+`touch_gamepad_layout.txt` (config folder). Per game settings are stored in `gameProfiles/<title id>.ini`.
+
+Core files touched for these features: `LatteTouchGamepad.*` (new) and `LatteOverlay.cpp` (gamepad),
+`VulkanRenderer.cpp` and `RendererOuputShader.cpp` (rotation), `GameProfile.*` and `GX2_Event.cpp` (per game options).
 
 Everything is stored in the same `settings.xml` as the desktop interface.
 

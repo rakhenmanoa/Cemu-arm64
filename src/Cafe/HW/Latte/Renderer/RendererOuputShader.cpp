@@ -2,6 +2,7 @@
 #include "Cafe/HW/Latte/Renderer/Renderer.h"
 #include "Cafe/HW/Latte/Core/Latte.h"
 #include "config/ActiveSettings.h"
+#include "WindowSystem.h"
 
 const std::string RendererOutputShader::s_copy_shader_source =
 R"(
@@ -390,6 +391,19 @@ void main(){
 	else if( vID == 4 ) { vPos = vec2(1.0,-1.0); vUV = vec2(1.0,0.0); }
 	else if( vID == 5 ) { vPos = vec2(1.0,1.0); vUV = vec2(1.0,1.0); }
 	)";
+		}
+
+		// rotate the image for the rotated mobile game view (see WindowInfo::rotation)
+		switch (WindowSystem::GetWindowInfo().rotation.load())
+		{
+		case 90:
+			vertex_source << "	vUV = vec2(vUV.y, 1.0 - vUV.x);\n";
+			break;
+		case 270:
+			vertex_source << "	vUV = vec2(1.0 - vUV.y, vUV.x);\n";
+			break;
+		default:
+			break;
 		}
 
 		vertex_source <<

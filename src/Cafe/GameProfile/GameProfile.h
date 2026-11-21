@@ -10,6 +10,7 @@ struct gameProfileIntegerOption_t
 class GameProfile
 {
 	friend class GameProfileWindow;
+	friend class MobileGameProfile; // Qt mobile UI (src/gui/qtgui/MobileGameProfile.cpp)
 
 public:
 	static const uint32 kThreadQuantumDefault = 45000;
@@ -26,6 +27,10 @@ public:
 
 	[[nodiscard]] const std::optional<bool>& ShouldLoadSharedLibraries() const { return m_loadSharedLibraries; }
 	[[nodiscard]] bool StartWithGamepadView() const { return m_startWithPadView; }
+
+	// per game override of the global settings (not set: the global setting is used)
+	[[nodiscard]] const std::optional<bool>& GetRunAheadOfGpu() const { return m_runAheadOfGpu; }
+	[[nodiscard]] const std::optional<bool>& GetFrameLimit30() const { return m_frameLimit30; }
 
 	[[nodiscard]] const std::optional<GraphicAPI>& GetGraphicsAPI() const { return m_graphics_api; }
 	[[nodiscard]] const AccurateShaderMulOption& GetAccurateShaderMul() const { return m_accurateShaderMul; }
@@ -57,6 +62,8 @@ private:
 	// graphic settings
 	std::optional<GraphicAPI> m_graphics_api{};
 	AccurateShaderMulOption m_accurateShaderMul = AccurateShaderMulOption::True;
+	std::optional<bool> m_runAheadOfGpu{}; // GX2DrawDone does not wait for its own timestamp
+	std::optional<bool> m_frameLimit30{};  // pace the game at 30 FPS
 #ifdef ENABLE_METAL
 	bool m_shaderFastMath = true;
 	MetalBufferCacheMode m_metalBufferCacheMode = MetalBufferCacheMode::Auto;

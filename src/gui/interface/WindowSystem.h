@@ -32,6 +32,9 @@ namespace WindowSystem
 		std::atomic_int32_t width, height;			 // client size of main window
 		std::atomic_int32_t phys_width, phys_height; // client size of main window in physical pixels
 		std::atomic<double> dpi_scale;
+		// rotation of the game image in degrees (0, 90 or 270, clockwise). When set, width/height and phys_width/phys_height
+		// describe the rotated (logical) view; the swapchain itself has the swapped (physical) size
+		std::atomic_int32_t rotation{0};
 
 		std::atomic_bool pad_open;							 // if separate pad view is open
 		std::atomic_int32_t pad_width, pad_height;			 // client size of pad window

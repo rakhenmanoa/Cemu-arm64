@@ -112,6 +112,8 @@ add_library(CemuCafe
   HW/Latte/Core/LatteIndices.h
   HW/Latte/Core/LatteOverlay.cpp
   HW/Latte/Core/LatteOverlay.h
+  HW/Latte/Core/LatteTouchGamepad.cpp
+  HW/Latte/Core/LatteTouchGamepad.h
   HW/Latte/Core/LattePerformanceMonitor.cpp
   HW/Latte/Core/LattePerformanceMonitor.h
   HW/Latte/Core/LattePM4.h

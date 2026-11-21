@@ -8,6 +8,7 @@ Item {
     id: page
 
     property string title: qsTr("Controllers")
+    signal openMapping()
 
     readonly property int player: 0
     property var player0: ({"enabled": false, "type": "", "devices": []})
@@ -17,6 +18,14 @@ Item {
     function reload() {
         player0 = cemu.inputPlayer(player)
         devices = cemu.availableInputDevices()
+    }
+
+    function hasKeyboard() {
+        for (var i = 0; i < player0.devices.length; i++) {
+            if (player0.devices[i].api === "Keyboard")
+                return true
+        }
+        return false
     }
 
     function isAssigned(uuid) {
@@ -100,6 +109,45 @@ Item {
                 }
             }
 
+            SwitchDelegate {
+                id: touchSwitch
+                Layout.fillWidth: true
+                leftPadding: 16
+                rightPadding: 16
+                visible: page.player0.enabled && page.player0.type === cemu.inputTypes()[0]
+                text: qsTr("On-screen gamepad")
+                checked: page.hasKeyboard()
+                onToggled: {
+                    if (!cemu.setTouchGamepadEnabled(checked))
+                        checked = Qt.binding(function() { return page.hasKeyboard() })
+                }
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                visible: touchSwitch.visible
+                wrapMode: Text.Wrap
+                font.pixelSize: 12
+                opacity: 0.6
+                text: qsTr("Shows buttons and sticks over the game, usable with the touch screen. The sticks are digital (8 directions).")
+            }
+            Button {
+                id: editLayoutButton
+                property bool pending: false
+                Layout.fillWidth: true
+                Layout.leftMargin: 16
+                Layout.rightMargin: 16
+                visible: touchSwitch.visible && touchSwitch.checked
+                enabled: !pending
+                text: pending ? qsTr("Layout editor opens when the next game starts") : qsTr("Edit on-screen gamepad layout")
+                onClicked: {
+                    cemu.editTouchGamepadLayout()
+                    pending = true
+                }
+                Component.onCompleted: pending = cemu.touchGamepadEditPending()
+            }
+
             SectionHeader { text: qsTr("ASSIGNED CONTROLLER") }
 
             Label {
@@ -148,12 +196,19 @@ Item {
                 }
             }
 
-            Button {
+            RowLayout {
                 Layout.leftMargin: 16
                 Layout.topMargin: 8
+                spacing: 8
                 visible: page.player0.devices.length > 0
-                text: qsTr("Reset default mapping")
-                onClicked: cemu.resetInputMapping(page.player)
+                Button {
+                    text: qsTr("Reset default mapping")
+                    onClicked: cemu.resetInputMapping(page.player)
+                }
+                Button {
+                    text: qsTr("Edit mapping")
+                    onClicked: page.openMapping()
+                }
             }
 
             SectionHeader { text: qsTr("DETECTED CONTROLLERS") }
