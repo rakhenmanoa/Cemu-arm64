@@ -2,6 +2,8 @@ name: extract-alioth-rom
 on:
   push:
     branches: [extract-alioth-rom]
+permissions:
+  contents: write
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -20,7 +22,10 @@ jobs:
         run: |
           curl -fsL --retry 5 "https://bn.d.miui.com/OS1.0.6.0.TKHEUXM/alioth_eea_global_images_OS1.0.6.0.TKHEUXM_20260113.0000.00_13.0_eea_cd9cf4c493.tgz" | tar -tzv > out/ARCHIVE_CONTENT.txt || true
           wc -l out/ARCHIVE_CONTENT.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: alioth-flash-files
-          path: out/
+      - name: Push results to branch alioth-rom-files
+        run: |
+          cd out
+          git init -q -b alioth-rom-files
+          git add -A
+          git -c user.name=gha -c user.email=gha@users.noreply.github.com commit -q -m "alioth ROM flashing files [skip ci]"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" alioth-rom-files
