@@ -1,0 +1,26 @@
+name: extract-alioth-rom
+on:
+  push:
+    branches: [extract-alioth-rom]
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Stream ROM and keep only small flashing files
+        run: |
+          set -o pipefail
+          mkdir -p out
+          URL="https://bn.d.miui.com/OS1.0.6.0.TKHEUXM/alioth_eea_global_images_OS1.0.6.0.TKHEUXM_20260113.0000.00_13.0_eea_cd9cf4c493.tgz"
+          curl -fL --retry 5 "$URL" | tar -xzv -C out --wildcards --no-anchored \
+            'rawprogram*' 'patch*.xml' '*provision*' '*firehose*' '*.elf.sig' 'gpt_*' 'flash_*' || true
+          tar -tzf /dev/null 2>/dev/null || true
+          find out -type f -printf '%s %p\n' | sort -k2 | tee out/LISTE.txt
+      - name: List all archive entries (names only)
+        run: |
+          curl -fsL --retry 5 "https://bn.d.miui.com/OS1.0.6.0.TKHEUXM/alioth_eea_global_images_OS1.0.6.0.TKHEUXM_20260113.0000.00_13.0_eea_cd9cf4c493.tgz" | tar -tzv > out/ARCHIVE_CONTENT.txt || true
+          wc -l out/ARCHIVE_CONTENT.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alioth-flash-files
+          path: out/
